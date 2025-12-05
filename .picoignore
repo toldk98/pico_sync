@@ -1,0 +1,23 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore config / secrets (example)
+*.env
+config/local_settings.py
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore virtual environments
+venv/
+env/
+
+# Ignore Git directories
+.git/
+.gitignore
+
+# Ignore build artifacts
+dist/
+build/
