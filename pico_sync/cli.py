@@ -770,12 +770,7 @@ def pick_mode(src_root):
             ["[f] files", "[d] device", "[c] config", "quit"],
             prompt="pico> ",
             header=" Esc=back  /=search",
-            preview=(
-                'test "{}" = "[f] files" && echo "Огляд, перегляд та редагування файлів на Pico"; '
-                'test "{}" = "[d] device" && echo "Синхронізація, моніторинг, перезавантаження Pico"; '
-                'test "{}" = "[c] config" && echo "Вибір порту, перевірка оновлень, ініціалізація"; '
-                'test "{}" = "quit" && echo "Вихід із програми"'
-            )
+            preview="case {} in '[f] files') echo 'Огляд, перегляд та редагування файлів';; '[d] device') echo 'Синхронізація, моніторинг, перезавантаження';; '[c] config') echo 'Вибір порту, перевірка оновлень, ініціалізація';; 'quit') echo 'Вихід із програми';; esac"
         )
         if action is None or action == "quit":
             break
