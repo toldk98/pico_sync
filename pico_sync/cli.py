@@ -556,14 +556,19 @@ def interactive_select_port():
 # -----------------------------
 # PICK MODE
 # -----------------------------
-def _pick_item(items, prompt="> "):
-    """Try fzf, fall back to numbered input."""
+def _pick_item(items, prompt="> ", header=None, preview=None):
+    """Try fzf with optional header and preview, fall back to numbered input."""
     import shutil
     fzf = shutil.which("fzf")
     if fzf:
         try:
+            fzf_args = [fzf, "--border", "--prompt", prompt]
+            if header:
+                fzf_args += ["--header", header]
+            if preview:
+                fzf_args += ["--preview", preview, "--preview-window", "right:50%:border"]
             r = subprocess.run(
-                [fzf, "--border", "--prompt", prompt],
+                fzf_args,
                 input="\n".join(items),
                 capture_output=True, text=True
             )
@@ -573,6 +578,8 @@ def _pick_item(items, prompt="> "):
             pass
 
     print()
+    if header:
+        print(f"  {header}")
     for i, item in enumerate(items):
         print(f"  {i}) {item}")
     print()
@@ -761,7 +768,14 @@ def pick_mode(src_root):
     while True:
         action = _pick_item(
             ["[f] files", "[d] device", "[c] config", "quit"],
-            prompt="pico> "
+            prompt="pico> ",
+            header=" Esc=back  /=search",
+            preview=(
+                'test "{}" = "[f] files" && echo "Огляд, перегляд та редагування файлів на Pico"; '
+                'test "{}" = "[d] device" && echo "Синхронізація, моніторинг, перезавантаження Pico"; '
+                'test "{}" = "[c] config" && echo "Вибір порту, перевірка оновлень, ініціалізація"; '
+                'test "{}" = "quit" && echo "Вихід із програми"'
+            )
         )
         if action is None or action == "quit":
             break
