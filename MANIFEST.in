@@ -1,0 +1,15 @@
+include LICENSE
+include README.md
+include pyproject.toml
+include .picoignore
+recursive-include pico_sync *.py
+
+exclude *.pyc
+exclude *.pyo
+exclude *.log
+
+recursive-exclude * __pycache__
+recursive-exclude * *.pyc
+recursive-exclude * *.pyo
+recursive-exclude * *.DS_Store
+recursive-exclude * Thumbs.db

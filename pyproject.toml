@@ -1,0 +1,28 @@
+[project]
+name = "pico-sync"
+version = "1.0.0"
+description = "MicroPython deployment & synchronization tool for Raspberry Pi Pico"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "MIT" }
+keywords = ["pico", "micropython", "deployment", "sync", "rp2040"]
+
+authors = [
+    { name = "Anatolii Derkachenko", email = "toldk98@gmail.com" }
+]
+
+dependencies = [
+    "pyserial>=3.5",
+    "mpremote>=1.21.0"
+]
+
+[tool.setuptools.packages.find]
+include = ["pico_sync"]
+
+[project.scripts]
+picosync = "pico_sync.cli:main"
+
+[project.urls]
+homepage = "https://github.com/toldk98/pico_sync"
+source = "https://github.com/toldk98/pico_sync"
+issues = "https://github.com/toldk98/pico_sync/issues"

@@ -1,0 +1,12 @@
+# Pico Sync — default ignore patterns
+__pycache__/
+*.pyc
+.git/
+.DS_Store
+Thumbs.db
+dist/
+*.egg-info/
+build/
+.idea/
+*.swp
+*.swo
