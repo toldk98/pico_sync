@@ -1,4 +1,5 @@
 import os
+import sys
 import base64
 import subprocess
 import hashlib
@@ -10,6 +11,8 @@ import urllib.request
 import serial
 import serial.tools.list_ports as list_ports
 import time
+
+from . import projects
 
 # info for pico
 PICO_USB_VID = 0x2E8A  # Raspberry Pi (RP2040)
@@ -368,9 +371,6 @@ def pico_list_files():
 def sync_tree(src_root, filter="all"):
     project_root = _project_root(src_root)
     raw_patterns = load_ignore_list(project_root)
-    config = load_config(project_root)
-    if filter == "all" and config.get("filter"):
-        filter = config["filter"]
     compiled_patterns = compile_ignore_patterns(raw_patterns)
     print(f"Ignore patterns: {raw_patterns}")
     print(f"Delete filter: {filter}")
@@ -681,7 +681,9 @@ def _pick_files_menu():
     while True:
         action = _pick_item(
             ["..", "ls", "cat", "nano"],
-            prompt="files> "
+            prompt="files> ",
+            header=" Esc=back  /=search",
+            preview="case {} in '..') echo 'Повернутись до головного меню';; 'ls') echo 'Переглянути вміст директорії на Pico';; 'cat') echo 'Вивести вміст файлу на Pico';; 'nano') echo 'Редагувати файл на Pico в nano';; esac"
         )
         if action is None or action == "..":
             return
@@ -693,7 +695,7 @@ def _pick_files_menu():
             if path:
                 pico_cat(path)
                 input("\nPress Enter to continue...")
-        elif action == "[n] nano":
+        elif action == "nano":
             path = input("File path: ").strip()
             if path:
                 pico_nano(path)
@@ -705,25 +707,36 @@ def _pick_device_menu(port, src_root):
         print("❌ Не знайдено Pico. Спочатку обери порт у [config].")
         return port
 
+    project_root = _project_root(src_root)
+    config = load_config(project_root)
+    current_filter = config.get("filter", "all")
+
     while True:
         action = _pick_item(
             ["..", "sync", "monitor", "reboot"],
-            prompt="device> "
+            prompt="device> ",
+            header=" Esc=back  /=search",
+            preview="case {} in '..') echo 'Повернутись до головного меню';; 'sync') echo 'Синхронізувати файли з Pico (із вибором фільтра)';; 'monitor') echo 'Відкрити серійний монітор Pico';; 'reboot') echo 'Перезавантажити Pico';; esac"
         )
         if action is None or action == "..":
+            save_config(project_root, {"filter": current_filter})
             return port
 
         if action == "sync":
             filter_ = _pick_item(
                 ["all", "py", "py+", "nopy", "custom"],
-                prompt="filter> "
+                prompt="filter> ",
+                header=f" Current filter: {current_filter}",
+                preview="case {} in 'all') echo 'Видалити всі файли на Pico і залити src/';; 'py') echo 'Тільки .py файли';; 'py+') echo '.py, .txt, .json файли';; 'nopy') echo 'Все крім .py';; 'custom') echo 'Вказати власні розширення (через кому)';; esac"
             )
             if filter_ is None:
                 continue
             if filter_ == "custom":
                 ext = input("Extensions (comma-sep, e.g. .py,.txt): ").strip()
                 filter_ = ext if ext else "all"
-            sync_tree(src_root, filter=filter_)
+            current_filter = filter_
+            save_config(project_root, {"filter": current_filter})
+            sync_tree(src_root, filter=current_filter)
             delete_empty_dirs()
             input("\nPress Enter to continue...")
 
@@ -738,11 +751,13 @@ def _pick_device_menu(port, src_root):
 def _pick_config_menu(port, src_root):
     while True:
         action = _pick_item(
-            ["..", "port", "check_update", "init .picoignore"],
-            prompt="config> "
+            ["..", "port", "src", "check_update", "init .picoignore"],
+            prompt="config> ",
+            header=" Esc=back  /=search",
+            preview="case {} in '..') echo 'Повернутись до головного меню';; 'port') echo 'Обрати COM-порт Pico (автовизначення)';; 'src') echo 'Змінити вихідну теку для синхронізації';; 'check_update') echo 'Перевірити наявність оновлень Pico Sync';; 'init .picoignore') echo 'Створити .picoignore, meta/, .picosyncconfig';; esac"
         )
         if action is None or action == "..":
-            return port
+            return port, src_root
 
         if action == "port":
             chosen = interactive_select_port()
@@ -752,6 +767,16 @@ def _pick_config_menu(port, src_root):
                 project_root = _project_root(src_root)
                 save_config(project_root, {"port": port})
                 print(f"{C.GREEN}Port set: {port} (saved){C.RESET}")
+        elif action == "src":
+            new_src = input(f"Current src: {src_root}\nNew src path (Enter to keep): ").strip()
+            if new_src:
+                abs_src = os.path.abspath(new_src)
+                if os.path.isdir(abs_src):
+                    src_root = abs_src
+                    print(f"{C.GREEN}Src changed to: {src_root}{C.RESET}")
+                else:
+                    print(f"{C.RED}Directory not found: {abs_src}{C.RESET}")
+            input("\nPress Enter to continue...")
         elif action == "check_update":
             check_for_updates()
             input("\nPress Enter to continue...")
@@ -760,27 +785,142 @@ def _pick_config_menu(port, src_root):
             input("\nPress Enter to continue...")
 
 
-def pick_mode(src_root):
+def _pick_preview_cmd():
+    py = sys.executable or "python3"
+    return f"{py} -m pico_sync project preview {{}} 2>/dev/null"
+
+
+def _pick_project_or_action():
+    while True:
+        proj_list = projects.list_projects()
+        items = []
+        for p in proj_list:
+            items.append(f"{p['name']}  ({p['root']})")
+        items.append("[+] add project")
+        items.append("[-] remove project")
+        items.append("[q] quit")
+
+        choice = _pick_item(
+            items,
+            prompt="pico> ",
+            header=" Esc=back  /=search   Оберіть проект",
+            preview=_pick_preview_cmd(),
+        )
+        if choice is None or choice == "[q] quit":
+            return None, "quit"
+
+        if choice == "[+] add project":
+            try:
+                raw = input("Шлях до кореня проекту (Enter — поточна тека): ")
+            except UnicodeDecodeError:
+                print(f"{C.RED}Помилка читання вводу. Спробуйте ще раз.{C.RESET}")
+                continue
+            path = raw.strip()
+            if not path:
+                path = os.getcwd()
+            path = os.path.abspath(os.path.expanduser(path))
+            if os.path.isdir(path):
+                projects.add_project(path)
+                name = os.path.basename(path)
+                print(f"{C.GREEN}Проект додано: {name}{C.RESET}")
+            else:
+                print(f"{C.RED}Директорія не знайдена: {path}{C.RESET}")
+            continue
+
+        if choice == "[-] remove project":
+            if not proj_list:
+                print(f"{C.YELLOW}Немає проектів для видалення.{C.RESET}")
+                continue
+            remove_items = [f"{p['name']}  ({p['root']})" for p in proj_list]
+            remove_items.append("..")
+            to_remove = _pick_item(remove_items, prompt="remove> ", header=" Оберіть проект для видалення")
+            if to_remove and to_remove != ".." and to_remove in remove_items:
+                idx = remove_items.index(to_remove)
+                name = proj_list[idx]["name"]
+                if projects.remove_project(name):
+                    print(f"{C.GREEN}Проект видалено: {name}{C.RESET}")
+            continue
+
+        if choice in items:
+            idx = items.index(choice)
+            if idx < len(proj_list):
+                return proj_list[idx], "select"
+
+        continue
+
+
+def _filter_description(filter_):
+    desc = {
+        "all": "Всі файли (видаляє все на Pico перед заливкою)",
+        "py": "Тільки .py файли",
+        "py+": ".py, .txt, .json файли",
+        "nopy": "Все крім .py",
+    }
+    return desc.get(filter_, f"Розширення: {filter_}")
+
+
+def _show_project_info(port, src_root, project):
+    project_root = _project_root(src_root)
+    config = load_config(project_root)
+    current_filter = config.get("filter", "all")
+    pico_ports = find_pico_ports()
+    detected_devices = {p.device for p in pico_ports}
+    configured = port if port else config.get("port", "/dev/ttyACM0")
+
+    print(f"\n{C.BLUE}── Info ──────────────────────────────{C.RESET}")
+    if project:
+        print(f" {C.GREEN}Project:{C.RESET}  {project['name']}")
+        print(f" {C.GREEN}Root:{C.RESET}     {project['root']}")
+    print(f" {C.GREEN}Source:{C.RESET}    {src_root}")
+    print()
+    status = "⚡ connected" if configured in detected_devices else "✘ not found"
+    print(f" {C.GREEN}Device:{C.RESET}     {configured}  {status}")
+    if detected_devices:
+        print(f" {C.GREEN}Detected:{C.RESET}")
+        for d in sorted(detected_devices):
+            mark = " (configured)" if d == configured else ""
+            print(f"     ⚡ {d}{mark}")
+    print()
+    print(f" {C.GREEN}Filter:{C.RESET}    {_filter_description(current_filter)}")
+    print(f"{C.BLUE}──────────────────────────────────────{C.RESET}\n")
+
+    action = _pick_item(["..", "[p] change port"], prompt="info> ", header=" Esc=back")
+    if action == "[p] change port":
+        chosen = interactive_select_port()
+        if chosen:
+            port = chosen
+            os.environ["MPREMOTE_PORT"] = port
+            save_config(project_root, {"port": port})
+            print(f"{C.GREEN}Port set: {port}{C.RESET}")
+        input("\nPress Enter to continue...")
+    return port
+
+
+def pick_mode(src_root, project=None):
+    if project:
+        src_root = os.path.join(project["root"], project["src"])
     project_root = _project_root(src_root)
     config = load_config(project_root)
     port = config.get("port")
 
     while True:
         action = _pick_item(
-            ["[f] files", "[d] device", "[c] config", "quit"],
+            ["..", "[i] info", "[f] files", "[d] device", "[c] config"],
             prompt="pico> ",
             header=" Esc=back  /=search",
-            preview="case {} in '[f] files') echo 'Огляд, перегляд та редагування файлів';; '[d] device') echo 'Синхронізація, моніторинг, перезавантаження';; '[c] config') echo 'Вибір порту, перевірка оновлень, ініціалізація';; 'quit') echo 'Вихід із програми';; esac"
+            preview="case {} in '..') echo 'Повернутись до списку проектів';; '[i] info') echo 'Інформація про проект, пристрій, фільтр';; '[f] files') echo 'Огляд, перегляд та редагування файлів';; '[d] device') echo 'Синхронізація, моніторинг, перезавантаження';; '[c] config') echo 'Вибір порту, перевірка оновлень, ініціалізація';; esac"
         )
-        if action is None or action == "quit":
+        if action is None or action == "..":
             break
 
-        if action == "[f] files":
+        if action == "[i] info":
+            port = _show_project_info(port, src_root, project)
+        elif action == "[f] files":
             _pick_files_menu()
         elif action == "[d] device":
             port = _pick_device_menu(port, src_root)
         elif action == "[c] config":
-            port = _pick_config_menu(port, src_root)
+            port, src_root = _pick_config_menu(port, src_root)
 
 
 def build_parser():
@@ -792,7 +932,6 @@ def build_parser():
     parser.add_argument("--port", default="/dev/ttyACM0", help="Pico COM port")
     parser.add_argument("--src", default="src", help="Source directory to sync")
 
-    # Основні команди
     parser.add_argument("--sync", action="store_true", help="Synchronize src → Pico")
     parser.add_argument("--ls", metavar="PATH", help="List directory on Pico")
     parser.add_argument("--cat", metavar="FILE", help="Output file content from Pico")
@@ -827,6 +966,21 @@ def build_parser():
         help="Create default .picoignore and meta/ in current directory"
     )
 
+    subparsers = parser.add_subparsers(dest="command")
+    proj = subparsers.add_parser("project", help="Керування проектами")
+    proj_sub = proj.add_subparsers(dest="project_action")
+
+    proj_add = proj_sub.add_parser("add", help="Додати теку проекту")
+    proj_add.add_argument("path", nargs="?", default=".", help="Шлях до кореня проекту")
+
+    proj_sub.add_parser("list", help="Список збережених проектів")
+
+    proj_rm = proj_sub.add_parser("remove", help="Видалити проект зі списку")
+    proj_rm.add_argument("name", help="Ім'я або шлях проекту")
+
+    proj_preview = proj_sub.add_parser("preview", help="Показати інформацію про проект (для fzf preview)")
+    proj_preview.add_argument("line", help="Рядок зі списку проектів")
+
     return parser
 
 
@@ -834,17 +988,79 @@ def main():
     parser = build_parser()
     args = parser.parse_args()
 
-    # Якщо --init
+    if args.command == "project":
+        if args.project_action == "add":
+            path = os.path.abspath(args.path)
+            if not os.path.isdir(path):
+                print(f"{C.RED}Директорія не знайдена: {path}{C.RESET}")
+                exit(1)
+            is_new = projects.add_project(path)
+            name = os.path.basename(path)
+            if is_new:
+                print(f"{C.GREEN}Проект додано: {name}{C.RESET}")
+            else:
+                print(f"{C.YELLOW}Проект оновлено: {name}{C.RESET}")
+        elif args.project_action == "list":
+            proj_list = projects.list_projects()
+            if not proj_list:
+                print(f"{C.YELLOW}Немає збережених проектів.{C.RESET}")
+            else:
+                print(f"\n{C.BLUE}Збережені проекти:{C.RESET}\n")
+                for p in proj_list:
+                    print(f"  {p['name']:20}  {p['root']}")
+                print()
+        elif args.project_action == "remove":
+            if projects.remove_project(args.name):
+                print(f"{C.GREEN}Проект видалено: {args.name}{C.RESET}")
+            else:
+                print(f"{C.RED}Проект не знайдено: {args.name}{C.RESET}")
+        elif args.project_action == "preview":
+            line = args.line
+            if line.startswith("["):
+                exit(0)
+            m = re.search(r'\((.+)\)$', line)
+            root = m.group(1) if m else line
+            proj_list = projects.list_projects()
+            for p in proj_list:
+                if os.path.abspath(p["root"]) == os.path.abspath(root):
+                    src_root = os.path.join(p["root"], p["src"])
+                    config = load_config(p["root"])
+                    port = config.get("port")
+                    current_filter = config.get("filter", "all")
+                    pico_ports = find_pico_ports()
+                    detected = {dev.device for dev in pico_ports}
+                    configured = port if port else "/dev/ttyACM0"
+                    status = "connected" if configured in detected else "not found"
+                    print(f"Project:  {p['name']}")
+                    print(f"Root:     {p['root']}")
+                    print(f"Source:   {src_root}")
+                    print(f"Device:   {configured}  ({status})")
+                    if detected:
+                        for d in sorted(detected):
+                            mark = " <<<" if d == configured else ""
+                            print(f"            {d}{mark}")
+                    print(f"Filter:   {_filter_description(current_filter)}")
+                    break
+        exit(0)
+
     if args.init:
         init_project(os.path.join(os.getcwd(), args.src))
         exit(0)
 
-    # Якщо тільки --pick
     if args.pick:
-        pick_mode(os.path.join(os.getcwd(), args.src))
+        while True:
+            project, action = _pick_project_or_action()
+            if action == "quit":
+                exit(0)
+            if project:
+                projects.touch_project(project["root"])
+                src_root = os.path.join(project["root"], project["src"])
+            else:
+                src_root = os.path.join(os.getcwd(), args.src)
+                projects.add_project(os.getcwd(), src=args.src)
+            pick_mode(src_root, project=project)
         exit(0)
 
-    # Якщо нема команд
     no_actions = not (
             args.reboot
             or args.sync
@@ -865,12 +1081,10 @@ def main():
         subprocess.run(["mpremote", "reset"])
         exit(0)
 
-    # Update checker
     if args.check_update:
         check_for_updates()
         exit(0)
 
-    # Пошук порту
     if args.search_port:
         chosen = interactive_select_port()
         if not chosen:
@@ -879,10 +1093,8 @@ def main():
 
         print(f"\n{C.GREEN}Вибрано порт: {chosen}{C.RESET}\n")
 
-        # оновлюємо порт
         args.port = chosen
 
-    # Якщо порт не змінено — пробуємо з .picosyncconfig
     if args.port == "/dev/ttyACM0":
         project_root = _project_root(os.path.join(os.getcwd(), args.src))
         config = load_config(project_root)
@@ -890,10 +1102,8 @@ def main():
             args.port = config["port"]
             print(f"{C.BLUE}Port from config: {args.port}{C.RESET}")
 
-    # Встановлюємо порт для mpremote
     os.environ["MPREMOTE_PORT"] = args.port
 
-    # ------------ COMMANDS -----------------
     if args.ls:
         pico_ls(args.ls)
         exit()
@@ -912,12 +1122,10 @@ def main():
         exit()
 
     if args.monitor:
-        # auto-detect порт, якщо не вказано явно
         port = None if args.port == "/dev/ttyACM0" else args.port
         serial_monitor(port)
         exit()
 
-    # Якщо щось дивне — показати help
     parser.print_help()
 
 
