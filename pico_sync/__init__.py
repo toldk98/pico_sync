@@ -1,3 +1,5 @@
-from .cli import main
+# pico_sync/__init__.py
+"""Package init — exports main entry point."""
 
-__version__ = "1.0"
+from .cli import main
+from .constants import PICO_SYNC_VERSION as __version__
