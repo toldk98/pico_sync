@@ -11,7 +11,7 @@ from . import projects
 from .constants import C, PICO_SYNC_VERSION
 from .config import load_config, project_root, save_config, init_project
 from .delta import (
-    delete_empty_dirs, pico_cat, pico_edit, pico_ls, sync_tree,
+    delete_empty_dirs, mp_exec, pico_cat, pico_edit, pico_ls, sync_tree,
 )
 from .filter import filter_description
 from .lang import _, get_language, set_language
@@ -24,73 +24,77 @@ from .port import (
 def build_parser():
     """Build and return the main argument parser with all subcommands."""
     parser = argparse.ArgumentParser(
-        description="Pico Sync Tool — sync/ls/cat/edit for Raspberry Pi Pico",
+        description=_("cli_desc"),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    parser.add_argument("--port", default=None, help="Pico COM port (auto-detect if omitted)")
-    parser.add_argument("--src", default="src", help="Source directory to sync")
+    parser.add_argument("--port", default=None, help=_("cli_port_help"))
+    parser.add_argument("--src", default="src", help=_("cli_src_help"))
 
-    parser.add_argument("--sync", action="store_true", help="Synchronize src → Pico")
-    parser.add_argument("--ls", metavar="PATH", help="List directory on Pico")
-    parser.add_argument("--cat", metavar="FILE", help="Output file content from Pico")
-    parser.add_argument("--edit", metavar="FILE", help="Edit file on Pico")
+    parser.add_argument("--sync", action="store_true", help=_("cli_sync_help"))
+    parser.add_argument("--ls", metavar="PATH", help=_("cli_ls_help"))
+    parser.add_argument("--cat", metavar="FILE", help=_("cli_cat_help"))
+    parser.add_argument("--edit", metavar="FILE", help=_("cli_edit_help"))
     parser.add_argument(
         "--search_port",
         action="store_true",
-        help="Interactively search serial ports and choose Pico port",
+        help=_("cli_search_port_help"),
     )
     parser.add_argument(
         "--check_update",
         action="store_true",
-        help="Check for newer version of Pico Sync Tool",
+        help=_("cli_check_update_help"),
     )
     parser.add_argument(
         "--reboot",
         action="store_true",
-        help="Reboot Pico (software reset)",
+        help=_("cli_reboot_help"),
     )
     parser.add_argument(
-        "--monitor", action="store_true", help="Live serial log monitor for Pico"
+        "--monitor", action="store_true", help=_("cli_monitor_help")
     )
     parser.add_argument(
-        "--pick", action="store_true", help="Interactive pick mode"
+        "--pick", action="store_true", help=_("cli_pick_help")
     )
     parser.add_argument(
         "--filter", default="all",
-        help="Delete filter: all, py, py+, nopy, or .ext,.ext2"
+        help=_("cli_filter_help")
     )
     parser.add_argument(
         "--init", action="store_true",
-        help="Create default .picoignore and meta/ in current directory"
+        help=_("cli_init_help")
+    )
+    parser.add_argument(
+        "--set-name", metavar="NAME",
+        help=_("cli_set_name_help")
     )
     parser.add_argument(
         "--lang", default=None, choices=["ua", "en"],
-        help="Interface language (ua/en)"
+        help=_("cli_lang_help")
     )
     parser.add_argument(
         "--version", action="store_true",
-        help="Show version and exit"
+        help=_("cli_version_help")
     )
 
     subparsers = parser.add_subparsers(dest="command")
-    proj = subparsers.add_parser("project", help="Керування проектами")
+    proj = subparsers.add_parser("project", help=_("cli_project_help"))
     proj_sub = proj.add_subparsers(dest="project_action")
 
-    proj_add = proj_sub.add_parser("add", help="Додати теку проекту")
-    proj_add.add_argument("path", nargs="?", default=".", help="Шлях до кореня проекту")
+    proj_add = proj_sub.add_parser("add", help=_("cli_project_add_help"))
+    proj_add.add_argument("path", nargs="?", default=".", help=_("cli_project_add_path_help"))
 
-    proj_sub.add_parser("list", help="Список збережених проектів")
+    proj_sub.add_parser("list", help=_("cli_project_list_help"))
 
-    proj_rm = proj_sub.add_parser("remove", help="Видалити проект зі списку")
-    proj_rm.add_argument("name", help="Ім'я або шлях проекту")
+    proj_rm = proj_sub.add_parser("remove", help=_("cli_project_remove_help"))
+    proj_rm.add_argument("name", help=_("cli_project_remove_name_help"))
 
-    proj_preview = proj_sub.add_parser("preview", help="Показати інформацію про проект")
-    proj_preview.add_argument("line", help="Рядок зі списку проектів")
+    proj_preview = proj_sub.add_parser("preview", help=_("cli_project_preview_help"))
+    proj_preview.add_argument("line", help=_("cli_project_preview_line_help"))
 
-    proj_preview_main = proj_sub.add_parser("preview-main", help="Показати preview для головного меню (для fzf)")
-    proj_preview_main.add_argument("item", help="Вибраний пункт меню")
-    proj_preview_main.add_argument("root", help="Корінь проекту")
+    proj_preview_main = proj_sub.add_parser("preview-main", help=_("cli_project_preview_main_help"))
+    proj_preview_main.add_argument("item", help=_("cli_project_preview_main_item_help"))
+    proj_preview_main.add_argument("root", help=_("cli_project_preview_main_root_help"))
 
     return parser
 
@@ -104,15 +108,25 @@ def _print_project_preview(proj):
     src_root = os.path.join(proj["root"], proj["src"])
     config = load_config(proj["root"])
     port = config.get("port")
+    piconame = config.get("piconame", "")
     current_filter = config.get("filter", "all")
     pico_ports = find_pico_ports()
     detected = {dev.device for dev in pico_ports}
-    configured = port or _("port_not_set")
+
+    if piconame:
+        from .port import find_pico_by_name
+        pico_port = find_pico_by_name(piconame)
+        configured = pico_port or _("port_not_set")
+    else:
+        configured = port or _("port_not_set")
+
     status = _("info_connected") if configured in detected else _("info_not_found")
     print(f"{_('info_project', name=proj['name'])}")
     print(f"{_('info_root', path=proj['root'])}")
     print(f"{_('info_source', path=src_root)}")
     print(f"{_('info_device', port=configured, status=status)}")
+    if piconame:
+        print(f"{_('info_piconame', name=piconame)}")
     if detected:
         print(f"{_('info_detected')}")
         for d in sorted(detected):
@@ -121,13 +135,35 @@ def _print_project_preview(proj):
     print(f"{_('info_filter', filter=filter_description(current_filter))}")
 
 
+def _run_interactive(args):
+    while True:
+        project, action = _pick_project_or_action()
+        if action == "quit":
+            exit(0)
+        if project:
+            projects.touch_project(project["root"])
+            src_root = os.path.join(project["root"], project["src"])
+        else:
+            src_root = os.path.join(os.getcwd(), args.src)
+            projects.add_project(os.getcwd(), src=args.src)
+        pick_mode(src_root, project=project)
+
+
 def main():
     """Parse args and dispatch to the appropriate command or interactive mode."""
+    raw_lang = None
+    for i, a in enumerate(sys.argv):
+        if a == "--lang" and i + 1 < len(sys.argv):
+            raw_lang = sys.argv[i + 1]
+            break
+        if a.startswith("--lang="):
+            raw_lang = a.split("=", 1)[1]
+            break
+    if raw_lang:
+        set_language(raw_lang)
+
     parser = build_parser()
     args = parser.parse_args()
-
-    if args.lang:
-        set_language(args.lang)
 
     if args.version:
         print(f"pico_sync {PICO_SYNC_VERSION}")
@@ -204,18 +240,24 @@ def main():
         init_project(os.path.join(os.getcwd(), args.src))
         exit(0)
 
+    if args.set_name:
+        from .config import load_config, project_root, save_config
+        from .port import ensure_port, find_pico_port_auto
+        p_root = project_root(os.path.join(os.getcwd(), args.src))
+        config = load_config(p_root)
+        port = config.get("port") or find_pico_port_auto()
+        if not port:
+            print(f"{C.RED}{_('port_not_found')}{C.RESET}")
+            exit(1)
+        os.environ["MPREMOTE_PORT"] = port
+        mp_exec(f'with open("/.piconame", "w") as f: f.write({repr(args.set_name)})')
+        save_config(p_root, {"piconame": args.set_name})
+        name = args.set_name
+        print(f"{C.GREEN}{_('piconame_set', name=name)}{C.RESET}")
+        exit(0)
+
     if args.pick:
-        while True:
-            project, action = _pick_project_or_action()
-            if action == "quit":
-                exit(0)
-            if project:
-                projects.touch_project(project["root"])
-                src_root = os.path.join(project["root"], project["src"])
-            else:
-                src_root = os.path.join(os.getcwd(), args.src)
-                projects.add_project(os.getcwd(), src=args.src)
-            pick_mode(src_root, project=project)
+        _run_interactive(args)
         exit(0)
 
     no_actions = not (
@@ -230,8 +272,7 @@ def main():
     )
 
     if no_actions:
-        parser.print_help()
-        exit(0)
+        _run_interactive(args)
 
     if args.reboot:
         print(f"{C.BLUE}{_('rebooting_cli')}{C.RESET}")

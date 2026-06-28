@@ -7,6 +7,12 @@ import shutil
 import subprocess
 import sys
 
+
+def _uinput(prompt=""):
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.buffer.readline().decode("utf-8", errors="replace").strip()
+
 from . import projects
 from .constants import C
 from .config import (
@@ -19,7 +25,8 @@ from .delta import (
 from .filter import filter_description
 from .lang import _, get_language, set_language
 from .port import (
-    ensure_port, find_pico_ports, interactive_select_port, serial_monitor,
+    ensure_port, find_pico_by_name, find_pico_ports, interactive_select_port,
+    serial_monitor,
 )
 
 
@@ -150,13 +157,13 @@ def _pick_ls_browser(all_files=None):
 
             if action == "cat":
                 pico_cat(file_path)
-                input(_("press_enter"))
+                _uinput(_("press_enter"))
 
             elif action == "edit":
                 pico_edit(file_path)
 
             elif action == "rm":
-                confirm = input(_("confirm_delete", name=name)).strip().lower()
+                confirm = _uinput(_("confirm_delete", name=name)).strip().lower()
                 if confirm == "y":
                     mp_exec(f"import os; os.remove({repr(file_path)})")
                     print(f"{C.GREEN}{_('deleted_ok', name=name)}{C.RESET}")
@@ -230,18 +237,19 @@ def _pick_files_menu(all_files=None):
     _pick_ls_browser(all_files)
 
 
-def _pick_device_menu(port, src_root):
+def _pick_device_menu(port, src_root, piconame=None):
     """Interactive submenu for device operations (sync, monitor, reboot).
 
     Args:
         port: Current port string.
         src_root: Source directory path.
+        piconame: Optional .piconame for precise port detection.
 
     Returns:
         Tuple of (port, needs_refresh). port may change if reconfigured.
         needs_refresh is True if sync or reboot was performed.
     """
-    port = ensure_port(port)
+    port = ensure_port(port, piconame=piconame)
     if not port:
         print(_("device_not_found"))
         return port, False
@@ -283,14 +291,14 @@ def _pick_device_menu(port, src_root):
             if filter_ is None:
                 continue
             if filter_ == "custom":
-                ext = input(_("ext_prompt")).strip()
+                ext = _uinput(_("ext_prompt")).strip()
                 filter_ = ext if ext else "all"
             current_filter = filter_
             save_config(p_root, {"filter": current_filter})
             sync_tree(src_root, filter=current_filter)
             delete_empty_dirs()
             needs_refresh = True
-            input(_("press_enter"))
+            _uinput(_("press_enter"))
 
         elif action == "monitor":
             serial_monitor(port)
@@ -301,25 +309,82 @@ def _pick_device_menu(port, src_root):
             needs_refresh = True
 
 
+def _pick_piconame_menu(src_root):
+    p_root = project_root(src_root)
+    config = load_config(p_root)
+    current = config.get("piconame", "")
+    while True:
+        status = _("piconame_current", name=current) if current else _("piconame_not_set")
+        action = _pick_item(
+            ["..", "detect", "set", "clear"],
+            prompt="piconame> ",
+            header=status,
+            preview=_build_preview({
+                "..": _("back_to_main"),
+                "detect": _("piconame_detect"),
+                "set": _("piconame_set"),
+                "clear": _("piconame_clear"),
+            }),
+        )
+        if action is None or action == "..":
+            return
+
+        if action == "detect":
+            port = ensure_port(config.get("port"))
+            if not port:
+                from .port import find_pico_port_auto
+                port = find_pico_port_auto()
+            if not port:
+                print(f"{C.RED}{_('port_not_found')}{C.RESET}")
+                _uinput(_("press_enter"))
+                continue
+            os.environ["MPREMOTE_PORT"] = port
+            from .port import _read_piconame_from_port
+            name = _read_piconame_from_port(port)
+            if name:
+                save_config(p_root, {"piconame": name})
+                current = name
+                print(f"{C.GREEN}{_('piconame_detected', name=name)}{C.RESET}")
+            else:
+                print(f"{C.YELLOW}{_('piconame_not_on_pico')}{C.RESET}")
+            _uinput(_("press_enter"))
+
+        elif action == "set":
+            new_name = _uinput(_("piconame_prompt")).strip()
+            if new_name:
+                port = ensure_port(config.get("port"))
+                if not port:
+                    from .port import find_pico_port_auto
+                    port = find_pico_port_auto()
+                if not port:
+                    print(f"{C.RED}{_('port_not_found')}{C.RESET}")
+                    _uinput(_("press_enter"))
+                    continue
+                os.environ["MPREMOTE_PORT"] = port
+                mp_exec(f'with open("/.piconame", "w") as f: f.write({repr(new_name)})')
+                save_config(p_root, {"piconame": new_name})
+                current = new_name
+                print(f"{C.GREEN}{_('piconame_set', name=new_name)}{C.RESET}")
+            _uinput(_("press_enter"))
+
+        elif action == "clear":
+            save_config(p_root, {"piconame": ""})
+            current = ""
+            print(f"{C.GREEN}{_('piconame_cleared')}{C.RESET}")
+            _uinput(_("press_enter"))
+
+
 def _pick_config_menu(port, src_root):
-    """Interactive submenu for configuration (port, src, updates, init).
-
-    Args:
-        port: Current port string.
-        src_root: Current source directory path.
-
-    Returns:
-        Tuple of (port, src_root) — may be updated.
-    """
     while True:
         action = _pick_item(
-            ["..", "port", "src", "check_update", "init"],
+            ["..", "port", "src", "piconame", "check_update", "init"],
             prompt="config> ",
             header=_("device_header"),
             preview=_build_preview({
                 "..": _("back_to_main"),
                 "port": _("config_port"),
                 "src": _("config_src"),
+                "piconame": _("config_piconame"),
                 "check_update": _("config_check_update"),
                 "init": _("config_init"),
             }),
@@ -336,7 +401,7 @@ def _pick_config_menu(port, src_root):
                 save_config(p_root, {"port": port})
                 print(f"{C.GREEN}{_('config_port_set', port=port)}{C.RESET}")
         elif action == "src":
-            new_src = input(_("config_src_change", root=src_root)).strip()
+            new_src = _uinput(_("config_src_change", root=src_root)).strip()
             if new_src:
                 abs_src = os.path.abspath(new_src)
                 if os.path.isdir(abs_src):
@@ -344,13 +409,15 @@ def _pick_config_menu(port, src_root):
                     print(f"{C.GREEN}{_('config_src_ok', root=src_root)}{C.RESET}")
                 else:
                     print(f"{C.RED}{_('config_src_not_found', path=abs_src)}{C.RESET}")
-            input(_("press_enter"))
+            _uinput(_("press_enter"))
+        elif action == "piconame":
+            _pick_piconame_menu(src_root)
         elif action == "check_update":
             check_for_updates()
-            input(_("press_enter"))
+            _uinput(_("press_enter"))
         elif action == "init":
             init_project(src_root)
-            input(_("press_enter"))
+            _uinput(_("press_enter"))
 
 
 def _pick_preview_cmd():
@@ -435,7 +502,7 @@ def _pick_project_or_action():
                 set_language(lang_choice)
                 lang_name = _("lang_ua") if lang_choice == "ua" else _("lang_en")
                 print(f"{C.GREEN}{_('lang_set', lang=lang_name)}{C.RESET}")
-                input(_("press_enter"))
+                _uinput(_("press_enter"))
             continue
 
         if choice in items:
@@ -457,9 +524,16 @@ def _show_project_info(port, src_root, project):
     p_root = project_root(src_root)
     config = load_config(p_root)
     current_filter = config.get("filter", "all")
+    piconame = config.get("piconame", "")
     pico_ports = find_pico_ports()
     detected_devices = {p.device for p in pico_ports}
-    configured = port or config.get("port") or _("port_not_set")
+
+    if piconame:
+        from .port import find_pico_by_name
+        pico_port = find_pico_by_name(piconame)
+        configured = pico_port or _("port_not_set")
+    else:
+        configured = port or config.get("port") or _("port_not_set")
 
     status_icon = "⚡" if configured in detected_devices else "✘"
     status_label = _("info_connected") if configured in detected_devices else _("info_not_found")
@@ -471,6 +545,10 @@ def _show_project_info(port, src_root, project):
     print(f" {C.GREEN}{_('info_source', path=src_root)}{C.RESET}")
     print()
     print(f" {C.GREEN}{_('info_device', port=configured, status=status_label)}{C.RESET}  {status_icon}")
+    if piconame:
+        print(f" {C.GREEN}{_('info_piconame', name=piconame)}{C.RESET}")
+        if configured != _("port_not_set") and configured not in detected_devices:
+            print(f" {C.YELLOW}{_('info_piconame_not_found')}{C.RESET}")
     if detected_devices:
         print(f" {C.GREEN}{_('info_detected')}{C.RESET}")
         for d in sorted(detected_devices):
@@ -513,6 +591,7 @@ def pick_mode(src_root, project=None):
     p_root = project_root(src_root)
     config = load_config(p_root)
     port = config.get("port")
+    piconame = config.get("piconame", "")
     files_cache = None
 
     while True:
@@ -532,7 +611,7 @@ def pick_mode(src_root, project=None):
                 files_cache = pico_list_files()
             _pick_files_menu(files_cache)
         elif action == "[d] device":
-            port, needs_refresh = _pick_device_menu(port, src_root)
+            port, needs_refresh = _pick_device_menu(port, src_root, piconame=piconame)
             if needs_refresh:
                 files_cache = None
         elif action == "[c] config":

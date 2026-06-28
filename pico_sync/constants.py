@@ -19,6 +19,7 @@ CONFIG_FILE = ".picosyncconfig"
 DEFAULT_CONFIG = {
     "port": "",
     "filter": "all",
+    "piconame": "",
 }
 
 # Default .picoignore content

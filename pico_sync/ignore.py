@@ -22,6 +22,8 @@ def compile_ignore_patterns(patterns):
         pat = pat.replace("\\", "/")
 
         directory_only = pat.endswith("/")
+        if directory_only:
+            pat = pat[:-1]
 
         pat_escaped = re.escape(pat)
         pat_escaped = pat_escaped.replace(r"\*\*", "####DOUBLESTAR####")
@@ -30,7 +32,7 @@ def compile_ignore_patterns(patterns):
         pat_escaped = pat_escaped.replace("####DOUBLESTAR####", ".*")
 
         if directory_only:
-            regex = r"^" + pat_escaped[:-2] + r"(/.*)?$"
+            regex = r"^" + pat_escaped + r"(/.*)?$"
         else:
             regex = r"^" + pat_escaped + r"$"
 

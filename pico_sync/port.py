@@ -2,6 +2,7 @@
 """Serial port detection, selection, and monitor for Raspberry Pi Pico."""
 
 import os
+import subprocess
 import time
 import serial
 import serial.tools.list_ports as list_ports
@@ -36,6 +37,36 @@ def find_pico_port_auto():
     for p in list_ports.comports():
         if is_pico_port(p):
             return p.device
+    return None
+
+
+def _read_piconame_from_port(device):
+    old = os.environ.get("MPREMOTE_PORT")
+    os.environ["MPREMOTE_PORT"] = device
+    try:
+        result = subprocess.check_output(
+            ["mpremote", "exec",
+             'import os; print(open("/.piconame").read().strip())'],
+            stderr=subprocess.DEVNULL, timeout=3
+        ).decode().strip()
+        return result if result else None
+    except:
+        return None
+    finally:
+        if old:
+            os.environ["MPREMOTE_PORT"] = old
+        else:
+            os.environ.pop("MPREMOTE_PORT", None)
+
+
+def find_pico_by_name(name):
+    for p in find_pico_ports():
+        try:
+            dev_name = _read_piconame_from_port(p.device)
+            if dev_name == name:
+                return p.device
+        except:
+            continue
     return None
 
 
@@ -136,15 +167,12 @@ def interactive_select_port():
         print(_("invalid_number"))
 
 
-def ensure_port(port):
-    """Return port if set, otherwise auto-detect and export to environment.
-
-    Args:
-        port: Port string or None.
-
-    Returns:
-        Port string or None if not found.
-    """
+def ensure_port(port, piconame=None):
+    if piconame:
+        found = find_pico_by_name(piconame)
+        if found:
+            os.environ["MPREMOTE_PORT"] = found
+            return found
     if port is not None:
         return port
     port = find_pico_port_auto()
