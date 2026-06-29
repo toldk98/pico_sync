@@ -154,8 +154,9 @@ def interactive_select_port() -> Optional[str]:
 
     print_ports_with_numbers(ports, pico_devs)
 
+    from .pick import _uinput
     while True:
-        inp = input(_("select_port_prompt")).strip()
+        inp = _uinput(_("select_port_prompt"))
         if inp == "":
             return None
         if not inp.isdigit():

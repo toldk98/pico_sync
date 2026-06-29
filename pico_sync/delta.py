@@ -362,7 +362,8 @@ def pico_edit(path: str) -> None:
         subprocess.run(editor_cmd + [tmp_path])
     else:
         print(f"{C.YELLOW}{_('edit_no_editor', path=tmp_path)}{C.RESET}")
-        input(_("press_enter"))
+        from .pick import _uinput
+        _uinput(_("press_enter"))
         os.remove(tmp_path)
         return
 

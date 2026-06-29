@@ -466,7 +466,7 @@ def _pick_project_or_action() -> tuple:
 
         if choice == "[+] add project":
             try:
-                raw = input(_("project_prompt"))
+                raw = _uinput(_("project_prompt"))
             except UnicodeDecodeError:
                 print(f"{C.RED}{_('project_read_error')}{C.RESET}")
                 continue
@@ -581,7 +581,7 @@ def _show_project_info(port: Optional[str], src_root: str, project: Optional[dic
     print(f" {C.GREEN}{_('info_filter', filter=filter_description(current_filter))}{C.RESET}")
     print(f"{C.BLUE}──────────────────────────────────────{C.RESET}\n")
 
-    input(f"{C.YELLOW}{_('info_back_hint')}{C.RESET}")
+    _uinput(f"{C.YELLOW}{_('info_back_hint')}{C.RESET}")
 
 
 def _main_preview_cmd(root: str) -> str:

@@ -80,14 +80,14 @@ class TestPrintPorts:
 
 class TestInteractiveSelectPort:
     @patch("pico_sync.port.list_ports.comports")
-    @patch("pico_sync.port.input")
-    def test_select_valid(self, mock_input, mock_comports):
+    @patch("pico_sync.pick._uinput")
+    def test_select_valid(self, mock_uinput, mock_comports):
         mock_port = MagicMock()
         mock_port.vid = 0x2E8A
         mock_port.description = "Pico"
         mock_port.product = None
         mock_port.device = "/dev/ttyACM0"
         mock_comports.return_value = [mock_port]
-        mock_input.return_value = "0"
+        mock_uinput.return_value = "0"
         result = interactive_select_port()
         assert result == "/dev/ttyACM0"
