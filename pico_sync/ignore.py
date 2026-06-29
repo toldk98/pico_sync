@@ -5,7 +5,7 @@ import os
 import re
 
 
-def compile_ignore_patterns(patterns):
+def compile_ignore_patterns(patterns: list) -> list:
     """Convert gitignore-like patterns to compiled regex list.
 
     Supports **, *, ?, and directory-only (trailing /) patterns.
@@ -41,7 +41,7 @@ def compile_ignore_patterns(patterns):
     return regex_list
 
 
-def load_ignore_list(root):
+def load_ignore_list(root: str) -> list:
     """Read .picoignore patterns from project root.
 
     Args:
@@ -64,7 +64,7 @@ def load_ignore_list(root):
     return patterns
 
 
-def should_ignore(path, compiled_patterns, src_root):
+def should_ignore(path: str, compiled_patterns: list, src_root: str) -> bool:
     """Check if a file path matches any ignore pattern.
 
     Args:

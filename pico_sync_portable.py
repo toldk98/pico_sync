@@ -1,5 +1,5 @@
-# pico_sync.py
-"""Legacy entry point script — delegates to pico_sync.cli.main."""
+# pico_sync_portable.py
+"""Portable entry point — run directly without pip install: python pico_sync_portable.py"""
 
 from pico_sync.cli import main
 

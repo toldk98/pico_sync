@@ -87,13 +87,15 @@ UA = {
     "rebooting": "Перезавантажую Pico...",
 
     # pick (config menu)
-    "config_port": "Обрати COM-порт Pico (автовизначення)",
+    "config_port_settings": "Налаштування підключення Pico",
     "config_src": "Змінити вихідну теку для синхронізації",
-    "config_piconame": "Налаштувати ім'я пристрою (.piconame) для точної ідентифікації",
     "config_check_update": "Перевірити наявність оновлень Pico Sync",
     "config_init": "Створити .picoignore, meta/, .picosyncconfig",
     "config_lang": "Змінити мову інтерфейсу",
     "back_to_main": "Повернутись до головного меню",
+    "back_to_config": "Повернутись до налаштувань",
+    "port_settings_port": "Вибрати COM-порт вручну",
+    "port_settings_piconame": "Авто-пошук за іменем (.piconame) — для кількох Pico",
     "piconame_current": "Поточне ім'я: {name}",
     "piconame_not_set": "Ім'я не налаштовано (використовується перший-ліпший Pico)",
     "piconame_detect": "Прочитати /.piconame з Pico і зберегти в конфіг",
@@ -266,13 +268,15 @@ EN = {
     "rebooting": "Rebooting Pico...",
 
     # pick (config menu)
-    "config_port": "Select Pico COM port (auto-detect)",
+    "config_port_settings": "Pico connection settings",
     "config_src": "Change source directory for sync",
-    "config_piconame": "Configure device name (.piconame) for precise identification",
     "config_check_update": "Check for Pico Sync updates",
     "config_init": "Create .picoignore, meta/, .picosyncconfig",
     "config_lang": "Change interface language",
     "back_to_main": "Back to main menu",
+    "back_to_config": "Back to settings",
+    "port_settings_port": "Select COM port manually",
+    "port_settings_piconame": "Auto-find by device name (.piconame) — for multiple Picos",
     "piconame_current": "Current name: {name}",
     "piconame_not_set": "Name not set (first Pico found will be used)",
     "piconame_detect": "Read /.piconame from Pico and save to config",
@@ -367,7 +371,7 @@ EN = {
 _LANG = "ua"
 
 
-def _load_settings():
+def _load_settings() -> dict:
     """Load settings from ~/.config/pico_sync/settings.json."""
     try:
         if os.path.exists(SETTINGS_FILE):
@@ -378,7 +382,7 @@ def _load_settings():
     return {}
 
 
-def _save_settings(data):
+def _save_settings(data: dict) -> None:
     """Save settings to ~/.config/pico_sync/settings.json."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
     existing = _load_settings()
@@ -388,7 +392,7 @@ def _save_settings(data):
         f.write("\n")
 
 
-def _detect_language():
+def _detect_language() -> str:
     """Detect language from settings or $LANG. Fallback to 'ua'."""
     settings = _load_settings()
     if "language" in settings:
@@ -397,7 +401,7 @@ def _detect_language():
     return "ua" if locale.startswith("uk") else "en"
 
 
-def set_language(lang):
+def set_language(lang: str) -> None:
     """Set language at runtime and persist to settings."""
     global _LANG
     _LANG = lang if lang in ("ua", "en") else "ua"
@@ -407,7 +411,7 @@ def set_language(lang):
 _LANG = _detect_language()
 
 
-def _(key, **kwargs):
+def _(key: str, **kwargs: str) -> str:
     """Translate key using current language. Format with kwargs if provided."""
     d = UA if _LANG == "ua" else EN
     val = d.get(key)
@@ -418,6 +422,6 @@ def _(key, **kwargs):
     return val
 
 
-def get_language():
+def get_language() -> str:
     """Return current language code ('ua' or 'en')."""
     return _LANG

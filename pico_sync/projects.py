@@ -4,13 +4,15 @@
 import os
 from datetime import datetime
 
+from typing import Optional
+
 from .config import json_load, json_save
 
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", "pico_sync")
 PROJECTS_FILE = os.path.join(CONFIG_DIR, "projects.json")
 
 
-def _load_projects():
+def _load_projects() -> list:
     """Read projects list from ~/.config/pico_sync/projects.json.
 
     Returns:
@@ -22,7 +24,7 @@ def _load_projects():
     return data.get("projects", []) if isinstance(data, dict) else []
 
 
-def _save_projects(projects):
+def _save_projects(projects: list) -> None:
     """Write projects list to ~/.config/pico_sync/projects.json.
 
     Args:
@@ -33,7 +35,7 @@ def _save_projects(projects):
     json_save(PROJECTS_FILE, {"projects": projects})
 
 
-def add_project(root, name=None, src="src"):
+def add_project(root: str, name: Optional[str] = None, src: str = "src") -> bool:
     """Add or update a project in the global projects list.
 
     Args:
@@ -67,7 +69,7 @@ def add_project(root, name=None, src="src"):
     return True
 
 
-def remove_project(name_or_root):
+def remove_project(name_or_root: str) -> bool:
     """Remove a project from the global projects list.
 
     Args:
@@ -92,7 +94,7 @@ def remove_project(name_or_root):
     return removed
 
 
-def list_projects():
+def list_projects() -> list:
     """Return all saved projects sorted by last_used descending.
 
     Returns:
@@ -101,7 +103,7 @@ def list_projects():
     return sorted(_load_projects(), key=lambda p: p.get("last_used", ""), reverse=True)
 
 
-def touch_project(root):
+def touch_project(root: str) -> bool:
     """Update last_used timestamp for a project.
 
     Args:

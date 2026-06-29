@@ -7,11 +7,13 @@ import time
 import serial
 import serial.tools.list_ports as list_ports
 
+from typing import Any, Optional
+
 from .constants import PICO_USB_VID, PICO_KEYWORDS, BAUD, C
 from .lang import _
 
 
-def is_pico_port(port):
+def is_pico_port(port: Any) -> bool:
     """Check if a serial port matches a Raspberry Pi Pico by VID or description.
 
     Args:
@@ -27,12 +29,12 @@ def is_pico_port(port):
     return any(key in desc for key in PICO_KEYWORDS)
 
 
-def find_pico_ports():
+def find_pico_ports() -> list:
     """Return list of all comports that match is_pico_port()."""
     return [p for p in list_ports.comports() if is_pico_port(p)]
 
 
-def find_pico_port_auto():
+def find_pico_port_auto() -> Optional[str]:
     """Return device path of first Pico found, or None."""
     for p in list_ports.comports():
         if is_pico_port(p):
@@ -40,7 +42,7 @@ def find_pico_port_auto():
     return None
 
 
-def _read_piconame_from_port(device):
+def _read_piconame_from_port(device: str) -> Optional[str]:
     old = os.environ.get("MPREMOTE_PORT")
     os.environ["MPREMOTE_PORT"] = device
     try:
@@ -59,7 +61,7 @@ def _read_piconame_from_port(device):
             os.environ.pop("MPREMOTE_PORT", None)
 
 
-def find_pico_by_name(name):
+def find_pico_by_name(name: str) -> Optional[str]:
     for p in find_pico_ports():
         try:
             dev_name = _read_piconame_from_port(p.device)
@@ -70,7 +72,7 @@ def find_pico_by_name(name):
     return None
 
 
-def serial_monitor(port=None, baud=BAUD):
+def serial_monitor(port: Optional[str] = None, baud: int = BAUD) -> None:
     """Open serial monitor with auto-reconnect on Pico disconnect.
 
     Args:
@@ -119,7 +121,7 @@ def serial_monitor(port=None, baud=BAUD):
             port = new_port
 
 
-def print_ports_with_numbers(ports, pico_devs):
+def print_ports_with_numbers(ports: list, pico_devs: set) -> None:
     """Print numbered port list with Pico marker.
 
     Args:
@@ -136,7 +138,7 @@ def print_ports_with_numbers(ports, pico_devs):
     print("")
 
 
-def interactive_select_port():
+def interactive_select_port() -> Optional[str]:
     """Show numbered port list and let user pick one interactively.
 
     Returns:
@@ -167,7 +169,7 @@ def interactive_select_port():
         print(_("invalid_number"))
 
 
-def ensure_port(port, piconame=None):
+def ensure_port(port: Optional[str], piconame: Optional[str] = None) -> Optional[str]:
     if piconame:
         found = find_pico_by_name(piconame)
         if found:

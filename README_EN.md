@@ -169,7 +169,7 @@ On first launch you will see a list of saved projects. If no projects exist yet 
 [i] info    — project info (read-only)
 [f] files   — Pico file browser
 [d] device  — sync, monitor, reboot
-[c] config  — port, src, update settings
+[c] config  — port, src, update settings, init
 ```
 
 ### File browser
@@ -189,9 +189,7 @@ Browse the Pico file tree. Actions per file:
 
 ### Config
 
-- `port` — select COM port
-- `src` — change sync directory
-- `piconame` — configure device name: `detect` (read from Pico), `set` (write to Pico), `clear` (remove from config)
+- `port_settings` — Pico connection settings: manual port selection or auto-find by device name
 - `check_update` — check for updates
 - `init` — create `.picoignore`, `meta/`, `.picosyncconfig`
 

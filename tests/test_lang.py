@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from pico_sync.lang import _, set_language, get_language, CONFIG_DIR, SETTINGS_FILE
+from pico_sync.lang import _, set_language, get_language, CONFIG_DIR, SETTINGS_FILE, _load_settings, _save_settings
 
 
 @pytest.fixture(autouse=True)
@@ -58,6 +58,18 @@ class TestTranslate:
         import pico_sync.lang as lang_mod
         lang_mod._LANG = lang_mod._detect_language()
         assert get_language() == "en"
+
+    def test_load_settings_missing(self):
+        assert _load_settings() == {}
+
+    def test_save_and_load_settings(self):
+        _save_settings({"language": "en"})
+        loaded = _load_settings()
+        assert loaded.get("language") == "en"
+
+    def test_transform_with_no_kwargs(self):
+        result = _("port_not_found")
+        assert "Pico" in result or "Не знайдено" in result
 
 
 class TestDetectLanguage:

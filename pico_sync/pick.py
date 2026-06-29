@@ -7,11 +7,7 @@ import shutil
 import subprocess
 import sys
 
-
-def _uinput(prompt=""):
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    return sys.stdin.buffer.readline().decode("utf-8", errors="replace").strip()
+from typing import Optional
 
 from . import projects
 from .constants import C
@@ -30,7 +26,13 @@ from .port import (
 )
 
 
-def _build_preview(mapping):
+def _uinput(prompt: str = "") -> str:
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.buffer.readline().decode("utf-8", errors="replace").strip()
+
+
+def _build_preview(mapping: dict) -> str:
     """Build an fzf preview shell command from an option->description mapping.
 
     Args:
@@ -47,7 +49,7 @@ def _build_preview(mapping):
     return " ".join(parts)
 
 
-def _pick_item(items, prompt="> ", header=None, preview=None):
+def _pick_item(items: list, prompt: str = "> ", header: Optional[str] = None, preview: Optional[str] = None) -> Optional[str]:
     """Show interactive picker via fzf, fall back to numbered input.
 
     Args:
@@ -94,7 +96,7 @@ def _pick_item(items, prompt="> ", header=None, preview=None):
             return items[idx]
 
 
-def _build_tree(file_paths):
+def _build_tree(file_paths: list) -> list:
     """Build a nested dict tree from a list of file paths.
 
     Directories end with / in keys, files are True values.
@@ -123,7 +125,7 @@ def _build_tree(file_paths):
     return tree
 
 
-def _pick_ls_browser(all_files=None):
+def _pick_ls_browser(all_files: Optional[list] = None) -> None:
     """Interactive directory browser for files on Pico.
 
     Args:
@@ -228,7 +230,7 @@ def _pick_ls_browser(all_files=None):
         root = _build_tree(all_files)
 
 
-def _pick_files_menu(all_files=None):
+def _pick_files_menu(all_files: Optional[list] = None) -> None:
     """Open interactive file browser for Pico files.
 
     Args:
@@ -237,7 +239,7 @@ def _pick_files_menu(all_files=None):
     _pick_ls_browser(all_files)
 
 
-def _pick_device_menu(port, src_root, piconame=None):
+def _pick_device_menu(port: str, src_root: str, piconame: Optional[str] = None) -> tuple:
     """Interactive submenu for device operations (sync, monitor, reboot).
 
     Args:
@@ -309,82 +311,100 @@ def _pick_device_menu(port, src_root, piconame=None):
             needs_refresh = True
 
 
-def _pick_piconame_menu(src_root):
+def _pick_port_settings_menu(port: Optional[str], src_root: str) -> Optional[str]:
     p_root = project_root(src_root)
-    config = load_config(p_root)
-    current = config.get("piconame", "")
     while True:
-        status = _("piconame_current", name=current) if current else _("piconame_not_set")
         action = _pick_item(
-            ["..", "detect", "set", "clear"],
-            prompt="piconame> ",
-            header=status,
+            ["..", "port", "piconame"],
+            prompt="port> ",
+            header=_("device_header"),
             preview=_build_preview({
-                "..": _("back_to_main"),
-                "detect": _("piconame_detect"),
-                "set": _("piconame_set"),
-                "clear": _("piconame_clear"),
+                "..": _("back_to_config"),
+                "port": _("port_settings_port"),
+                "piconame": _("port_settings_piconame"),
             }),
         )
         if action is None or action == "..":
-            return
+            return port
 
-        if action == "detect":
-            port = ensure_port(config.get("port"))
-            if not port:
-                from .port import find_pico_port_auto
-                port = find_pico_port_auto()
-            if not port:
-                print(f"{C.RED}{_('port_not_found')}{C.RESET}")
-                _uinput(_("press_enter"))
-                continue
-            os.environ["MPREMOTE_PORT"] = port
-            from .port import _read_piconame_from_port
-            name = _read_piconame_from_port(port)
-            if name:
-                save_config(p_root, {"piconame": name})
-                current = name
-                print(f"{C.GREEN}{_('piconame_detected', name=name)}{C.RESET}")
-            else:
-                print(f"{C.YELLOW}{_('piconame_not_on_pico')}{C.RESET}")
+        if action == "port":
+            chosen = interactive_select_port()
+            if chosen:
+                port = chosen
+                os.environ["MPREMOTE_PORT"] = port
+                save_config(p_root, {"port": port})
+                print(f"{C.GREEN}{_('config_port_set', port=port)}{C.RESET}")
             _uinput(_("press_enter"))
 
-        elif action == "set":
-            new_name = _uinput(_("piconame_prompt")).strip()
-            if new_name:
-                port = ensure_port(config.get("port"))
-                if not port:
+        elif action == "piconame":
+            config = load_config(p_root)
+            current = config.get("piconame", "")
+            sub_action = _pick_item(
+                ["..", "detect", "set", "clear"],
+                prompt="piconame> ",
+                header=_("piconame_current", name=current) if current else _("piconame_not_set"),
+                preview=_build_preview({
+                    "..": _("back_to_config"),
+                    "detect": _("piconame_detect"),
+                    "set": _("piconame_set"),
+                    "clear": _("piconame_clear"),
+                }),
+            )
+            if sub_action is None or sub_action == "..":
+                continue
+
+            if sub_action == "detect":
+                p = ensure_port(config.get("port"))
+                if not p:
                     from .port import find_pico_port_auto
-                    port = find_pico_port_auto()
-                if not port:
+                    p = find_pico_port_auto()
+                if not p:
                     print(f"{C.RED}{_('port_not_found')}{C.RESET}")
                     _uinput(_("press_enter"))
                     continue
-                os.environ["MPREMOTE_PORT"] = port
-                mp_exec(f'with open("/.piconame", "w") as f: f.write({repr(new_name)})')
-                save_config(p_root, {"piconame": new_name})
-                current = new_name
-                print(f"{C.GREEN}{_('piconame_set', name=new_name)}{C.RESET}")
-            _uinput(_("press_enter"))
+                os.environ["MPREMOTE_PORT"] = p
+                from .port import _read_piconame_from_port
+                name = _read_piconame_from_port(p)
+                if name:
+                    save_config(p_root, {"piconame": name})
+                    print(f"{C.GREEN}{_('piconame_detected', name=name)}{C.RESET}")
+                else:
+                    print(f"{C.YELLOW}{_('piconame_not_on_pico')}{C.RESET}")
+                _uinput(_("press_enter"))
 
-        elif action == "clear":
-            save_config(p_root, {"piconame": ""})
-            current = ""
-            print(f"{C.GREEN}{_('piconame_cleared')}{C.RESET}")
-            _uinput(_("press_enter"))
+            elif sub_action == "set":
+                new_name = _uinput(_("piconame_prompt")).strip()
+                if new_name:
+                    p = ensure_port(config.get("port"))
+                    if not p:
+                        from .port import find_pico_port_auto
+                        p = find_pico_port_auto()
+                    if not p:
+                        print(f"{C.RED}{_('port_not_found')}{C.RESET}")
+                        _uinput(_("press_enter"))
+                        continue
+                    os.environ["MPREMOTE_PORT"] = p
+                    mp_exec(f'with open("/.piconame", "w") as f: f.write({repr(new_name)})')
+                    save_config(p_root, {"piconame": new_name})
+                    print(f"{C.GREEN}{_('piconame_set', name=new_name)}{C.RESET}")
+                _uinput(_("press_enter"))
+
+            elif sub_action == "clear":
+                save_config(p_root, {"piconame": ""})
+                print(f"{C.GREEN}{_('piconame_cleared')}{C.RESET}")
+                _uinput(_("press_enter"))
 
 
-def _pick_config_menu(port, src_root):
+def _pick_config_menu(port: Optional[str], src_root: str) -> tuple:
     while True:
         action = _pick_item(
-            ["..", "port", "src", "piconame", "check_update", "init"],
+            ["..", "port_settings", "src", "check_update", "init"],
             prompt="config> ",
             header=_("device_header"),
             preview=_build_preview({
                 "..": _("back_to_main"),
-                "port": _("config_port"),
+                "port_settings": _("config_port_settings"),
                 "src": _("config_src"),
-                "piconame": _("config_piconame"),
                 "check_update": _("config_check_update"),
                 "init": _("config_init"),
             }),
@@ -392,14 +412,8 @@ def _pick_config_menu(port, src_root):
         if action is None or action == "..":
             return port, src_root
 
-        if action == "port":
-            chosen = interactive_select_port()
-            if chosen:
-                port = chosen
-                os.environ["MPREMOTE_PORT"] = port
-                p_root = project_root(src_root)
-                save_config(p_root, {"port": port})
-                print(f"{C.GREEN}{_('config_port_set', port=port)}{C.RESET}")
+        if action == "port_settings":
+            port = _pick_port_settings_menu(port, src_root)
         elif action == "src":
             new_src = _uinput(_("config_src_change", root=src_root)).strip()
             if new_src:
@@ -410,8 +424,6 @@ def _pick_config_menu(port, src_root):
                 else:
                     print(f"{C.RED}{_('config_src_not_found', path=abs_src)}{C.RESET}")
             _uinput(_("press_enter"))
-        elif action == "piconame":
-            _pick_piconame_menu(src_root)
         elif action == "check_update":
             check_for_updates()
             _uinput(_("press_enter"))
@@ -420,7 +432,7 @@ def _pick_config_menu(port, src_root):
             _uinput(_("press_enter"))
 
 
-def _pick_preview_cmd():
+def _pick_preview_cmd() -> str:
     """Return fzf preview shell command that shows project info.
 
     Uses `pico_sync project preview` which receives the fzf-selected line.
@@ -429,7 +441,7 @@ def _pick_preview_cmd():
     return f"{py} -m pico_sync project preview {{}} 2>/dev/null"
 
 
-def _pick_project_or_action():
+def _pick_project_or_action() -> tuple:
     """Show project list with actions (add/remove/quit), return selected project.
 
     Returns:
@@ -513,7 +525,7 @@ def _pick_project_or_action():
         continue
 
 
-def _show_project_info(port, src_root, project):
+def _show_project_info(port: Optional[str], src_root: str, project: Optional[dict]) -> None:
     """Display read-only project info panel.
 
     Args:
@@ -561,7 +573,7 @@ def _show_project_info(port, src_root, project):
     input(f"{C.YELLOW}{_('info_back_hint')}{C.RESET}")
 
 
-def _main_preview_cmd(root):
+def _main_preview_cmd(root: str) -> str:
     """Return fzf preview command for main project menu.
 
     Uses `pico_sync project preview-main` to show live project info
@@ -577,7 +589,7 @@ def _main_preview_cmd(root):
     return f"{py} -m pico_sync project preview-main {{}} {shlex.quote(root)} 2>/dev/null"
 
 
-def pick_mode(src_root, project=None):
+def pick_mode(src_root: str, project: Optional[dict] = None) -> None:
     """Main interactive menu loop for a project.
 
     Shows options: info, files, device, config, and back.

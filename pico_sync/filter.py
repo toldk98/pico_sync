@@ -2,7 +2,7 @@
 """Delete filter logic for file sync."""
 
 
-def match_filter(filter_, remote_path):
+def match_filter(filter_: str, remote_path: str) -> bool:
     """Check if a remote file path matches the delete filter.
 
     Args:
@@ -30,7 +30,7 @@ def match_filter(filter_, remote_path):
 from .lang import _
 
 
-def filter_description(filter_):
+def filter_description(filter_: str) -> str:
     """Return a human-readable description of a filter value.
 
     Args:

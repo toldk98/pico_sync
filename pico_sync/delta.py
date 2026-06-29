@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 import shutil
 
+from typing import Optional
+
 from .constants import C
 from .config import project_root
 from .filter import match_filter
@@ -16,7 +18,7 @@ from .ignore import compile_ignore_patterns, load_ignore_list, should_ignore
 from .lang import _
 
 
-def mp_exec(code):
+def mp_exec(code: str) -> None:
     """Run MicroPython code on Pico via mpremote exec.
 
     Args:
@@ -27,7 +29,7 @@ def mp_exec(code):
     subprocess.run(["mpremote", "exec", code], check=True)
 
 
-def mp_check_output(code):
+def mp_check_output(code: str) -> str:
     """Run MicroPython code on Pico via mpremote exec, return stdout.
 
     Args:
@@ -39,7 +41,7 @@ def mp_check_output(code):
     return subprocess.check_output(["mpremote", "exec", code]).decode()
 
 
-def local_sha256(data: bytes):
+def local_sha256(data: bytes) -> str:
     """Compute SHA-256 hex digest of local data.
 
     Args:
@@ -51,7 +53,7 @@ def local_sha256(data: bytes):
     return hashlib.sha256(data).hexdigest()
 
 
-def pico_file_sha256(path):
+def pico_file_sha256(path: str) -> Optional[str]:
     """Return SHA-256 hex digest of a file on Pico, or None if missing.
 
     Args:
@@ -80,7 +82,7 @@ def pico_file_sha256(path):
     return None if out == "NONE" else out
 
 
-def mp_write_file(remote_path, data: bytes):
+def mp_write_file(remote_path: str, data: bytes) -> None:
     """Write data to a file on Pico, auto-creating parent directories.
 
     Args:
@@ -112,7 +114,7 @@ def mp_write_file(remote_path, data: bytes):
     mp_exec(cmd)
 
 
-def pico_list_files():
+def pico_list_files() -> Optional[list]:
     """Recursively list all files on Pico.
 
     Returns:
@@ -140,7 +142,7 @@ def pico_list_files():
     return sorted(out.splitlines())
 
 
-def pico_batch_sha256(paths):
+def pico_batch_sha256(paths: list) -> dict:
     """Compute SHA-256 of multiple files on Pico in one mpremote call.
 
     Args:
@@ -181,7 +183,7 @@ def pico_batch_sha256(paths):
     return result
 
 
-def delete_empty_dirs():
+def delete_empty_dirs() -> None:
     """Recursively remove empty directories on Pico.
 
     No return value. Prints removed dirs to stdout.
@@ -212,7 +214,7 @@ def delete_empty_dirs():
         print(out)
 
 
-def sync_tree(src_root, filter="all"):
+def sync_tree(src_root: str, filter: str = "all") -> None:
     """Sync src_root to Pico: upload new/changed files, delete missing ones.
 
     Uses SHA-256 delta comparison. Respects .picoignore and delete filter.
@@ -284,7 +286,7 @@ def sync_tree(src_root, filter="all"):
     print(_("sync_complete"))
 
 
-def pico_ls(path):
+def pico_ls(path: str) -> None:
     """List directory contents on Pico (d/ prefix for directories).
 
     Args:
@@ -308,7 +310,7 @@ def pico_ls(path):
     print(mp_check_output(code))
 
 
-def pico_cat(path):
+def pico_cat(path: str) -> None:
     """Print file content from Pico to stdout.
 
     Args:
@@ -321,7 +323,7 @@ def pico_cat(path):
     print(out)
 
 
-def _find_editor():
+def _find_editor() -> Optional[list]:
     """Return editor command list or None."""
     if sys.platform == "darwin":
         return ["open", "-t"]
@@ -332,7 +334,7 @@ def _find_editor():
     return None
 
 
-def pico_edit(path):
+def pico_edit(path: str) -> None:
     """Download a file from Pico, edit in editor, upload changes back.
 
     Args:

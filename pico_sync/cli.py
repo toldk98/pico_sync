@@ -21,7 +21,7 @@ from .port import (
 )
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     """Build and return the main argument parser with all subcommands."""
     parser = argparse.ArgumentParser(
         description=_("cli_desc"),
@@ -99,7 +99,7 @@ def build_parser():
     return parser
 
 
-def _print_project_preview(proj):
+def _print_project_preview(proj: dict) -> None:
     """Print plain-text project summary for fzf preview panels.
 
     Args:
@@ -135,7 +135,7 @@ def _print_project_preview(proj):
     print(f"{_('info_filter', filter=filter_description(current_filter))}")
 
 
-def _run_interactive(args):
+def _run_interactive(args: argparse.Namespace) -> None:
     while True:
         project, action = _pick_project_or_action()
         if action == "quit":
@@ -149,7 +149,7 @@ def _run_interactive(args):
         pick_mode(src_root, project=project)
 
 
-def main():
+def main() -> None:
     """Parse args and dispatch to the appropriate command or interactive mode."""
     raw_lang = None
     for i, a in enumerate(sys.argv):

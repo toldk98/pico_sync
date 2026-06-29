@@ -1,9 +1,11 @@
+import json
 import os
 import tempfile
 
 import pytest
 
-from pico_sync.config import json_load, json_save, project_root, load_config, save_config
+from pico_sync.config import json_load, json_save, project_root, load_config, save_config, init_project, check_for_updates
+from pico_sync.constants import PICO_SYNC_VERSION
 
 
 class TestJsonIO:
@@ -33,6 +35,20 @@ class TestJsonIO:
             path = os.path.join(td, "sub", "nested", "file.json")
             json_save(path, {"a": 1})
             assert os.path.exists(path)
+
+    def test_json_save_empty_dict(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "empty.json")
+            json_save(path, {})
+            loaded = json_load(path)
+            assert loaded == {}
+
+    def test_json_load_empty_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "empty.json")
+            with open(path, "w") as f:
+                f.write("")
+            assert json_load(path) is None
 
 
 class TestProjectRoot:
@@ -70,3 +86,50 @@ class TestLoadSaveConfig:
             save_config(td, {"port": "COM5"})
             cfg = load_config(td)
             assert cfg["port"] == "COM5"
+
+
+class TestInitProject:
+    def test_init_creates_all(self):
+        with tempfile.TemporaryDirectory() as td:
+            src_dir = os.path.join(td, "src")
+            os.makedirs(src_dir)
+            init_project(src_dir)
+            assert os.path.exists(os.path.join(td, ".picoignore"))
+            assert os.path.isdir(os.path.join(td, "meta"))
+            assert os.path.exists(os.path.join(td, ".picosyncconfig"))
+
+    def test_init_skips_existing(self):
+        with tempfile.TemporaryDirectory() as td:
+            src_dir = os.path.join(td, "src")
+            os.makedirs(src_dir)
+            open(os.path.join(td, ".picoignore"), "w").close()
+            os.makedirs(os.path.join(td, "meta"), exist_ok=True)
+            init_project(src_dir)
+            assert os.path.exists(os.path.join(td, ".picoignore"))
+            assert os.path.isdir(os.path.join(td, "meta"))
+
+
+class TestCheckForUpdates:
+    def test_check_update_available(self, mocker):
+        mock_resp = mocker.MagicMock()
+        mock_resp.read.return_value.decode.return_value = json.dumps({
+            "version": "99.99.99",
+            "changelog": "Major update",
+            "url": "https://example.com",
+        })
+        mocker.patch("pico_sync.config.urllib.request.urlopen").return_value.__enter__.return_value = mock_resp
+        check_for_updates()
+
+    def test_check_update_current(self, mocker):
+        mock_resp = mocker.MagicMock()
+        mock_resp.read.return_value.decode.return_value = json.dumps({
+            "version": PICO_SYNC_VERSION,
+            "changelog": "",
+            "url": "",
+        })
+        mocker.patch("pico_sync.config.urllib.request.urlopen").return_value.__enter__.return_value = mock_resp
+        check_for_updates()
+
+    def test_check_update_network_error(self, mocker):
+        mocker.patch("pico_sync.config.urllib.request.urlopen", side_effect=Exception("Network error"))
+        check_for_updates()

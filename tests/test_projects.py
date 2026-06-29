@@ -67,3 +67,15 @@ class TestProjects:
                 projects.add_project(td2, name="first")
                 lst = projects.list_projects()
                 assert lst[0]["name"] == "first"  # newest first
+
+    def test_add_project_with_src(self):
+        with tempfile.TemporaryDirectory() as td:
+            projects.add_project(td, src="firmware")
+            lst = projects.list_projects()
+            assert lst[0]["src"] == "firmware"
+
+    def test_add_project_custom_name(self):
+        with tempfile.TemporaryDirectory() as td:
+            projects.add_project(td, name="CustomName")
+            lst = projects.list_projects()
+            assert lst[0]["name"] == "CustomName"

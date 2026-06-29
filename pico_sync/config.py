@@ -5,11 +5,13 @@ import json
 import os
 import urllib.request
 
+from typing import Any
+
 from .constants import CONFIG_FILE, DEFAULT_CONFIG, DEFAULT_PICOIGNORE, C, PICO_SYNC_VERSION, VERSION_CHECK_URL
 from .lang import _
 
 
-def json_load(path, default=None):
+def json_load(path: str, default: Any = None) -> Any:
     """Load JSON from file, returning default on error or missing file.
 
     Args:
@@ -28,7 +30,7 @@ def json_load(path, default=None):
         return default
 
 
-def json_save(path, data):
+def json_save(path: str, data: dict) -> None:
     """Write data as JSON to file, creating parent dirs if needed.
 
     Args:
@@ -45,12 +47,12 @@ def json_save(path, data):
         f.write("\n")
 
 
-def project_root(src_root):
+def project_root(src_root: str) -> str:
     """Return parent directory of src_root (the project root)."""
     return os.path.dirname(os.path.abspath(src_root))
 
 
-def load_config(project_root_path):
+def load_config(project_root_path: str) -> dict:
     """Load .picosyncconfig from project root.
 
     Args:
@@ -64,7 +66,7 @@ def load_config(project_root_path):
     return result if isinstance(result, dict) else {}
 
 
-def save_config(project_root_path, data):
+def save_config(project_root_path: str, data: dict) -> None:
     """Merge data into .picosyncconfig at project root and save.
 
     Args:
@@ -79,7 +81,7 @@ def save_config(project_root_path, data):
     json_save(path, existing)
 
 
-def init_project(src_root):
+def init_project(src_root: str) -> None:
     """Create .picoignore, meta/, and .picosyncconfig in project root.
 
     Skips creation if files already exist.
@@ -111,7 +113,7 @@ def init_project(src_root):
         print(f"{C.YELLOW}{_('config_exists', file=CONFIG_FILE)}{C.RESET}")
 
 
-def check_for_updates():
+def check_for_updates() -> None:
     """Check GitHub for a newer version. Prints result, fails silently on error.
 
     No return value.
