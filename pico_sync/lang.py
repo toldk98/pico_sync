@@ -1,10 +1,8 @@
 """Language support: UA/EN dictionaries, _() helper, settings persistence."""
 
-import json
 import os
 
-CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", "pico_sync")
-SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
+from .settings import _load_settings, _save_settings
 
 UA = {
     # port
@@ -94,6 +92,8 @@ UA = {
     "config_lang": "Змінити мову інтерфейсу",
     "back_to_main": "Повернутись до головного меню",
     "back_to_config": "Повернутись до налаштувань",
+    "back_to_settings": "Повернутись до налаштувань",
+    "config_settings": "Глобальні налаштування",
     "port_settings_port": "Вибрати COM-порт вручну",
     "port_settings_piconame": "Авто-пошук за іменем (.piconame) — для кількох Pico",
     "piconame_current": "Поточне ім'я: {name}",
@@ -275,6 +275,8 @@ EN = {
     "config_lang": "Change interface language",
     "back_to_main": "Back to main menu",
     "back_to_config": "Back to settings",
+    "back_to_settings": "Back to settings",
+    "config_settings": "Global settings",
     "port_settings_port": "Select COM port manually",
     "port_settings_piconame": "Auto-find by device name (.piconame) — for multiple Picos",
     "piconame_current": "Current name: {name}",
@@ -369,27 +371,6 @@ EN = {
 }
 
 _LANG = "ua"
-
-
-def _load_settings() -> dict:
-    """Load settings from ~/.config/pico_sync/settings.json."""
-    try:
-        if os.path.exists(SETTINGS_FILE):
-            with open(SETTINGS_FILE, "r") as f:
-                return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        pass
-    return {}
-
-
-def _save_settings(data: dict) -> None:
-    """Save settings to ~/.config/pico_sync/settings.json."""
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    existing = _load_settings()
-    existing.update(data)
-    with open(SETTINGS_FILE, "w") as f:
-        json.dump(existing, f, indent=2)
-        f.write("\n")
 
 
 def _detect_language() -> str:

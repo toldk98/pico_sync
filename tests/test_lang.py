@@ -3,19 +3,21 @@ import tempfile
 
 import pytest
 
-from pico_sync.lang import _, set_language, get_language, CONFIG_DIR, SETTINGS_FILE, _load_settings, _save_settings
+from pico_sync.lang import _, set_language, get_language
+from pico_sync.settings import CONFIG_DIR, SETTINGS_FILE, _load_settings, _save_settings
 
 
 @pytest.fixture(autouse=True)
 def isolate_settings():
+    import pico_sync.settings as settings_mod
+    import pico_sync.lang as lang_mod
     old_cfg = CONFIG_DIR, SETTINGS_FILE
     with tempfile.TemporaryDirectory() as td:
-        import pico_sync.lang as lang_mod
-        lang_mod.CONFIG_DIR = td
-        lang_mod.SETTINGS_FILE = os.path.join(td, "settings.json")
+        settings_mod.CONFIG_DIR = td
+        settings_mod.SETTINGS_FILE = os.path.join(td, "settings.json")
         lang_mod._LANG = "ua"
         yield
-    lang_mod.CONFIG_DIR, lang_mod.SETTINGS_FILE = old_cfg
+    settings_mod.CONFIG_DIR, settings_mod.SETTINGS_FILE = old_cfg
 
 
 class TestTranslate:

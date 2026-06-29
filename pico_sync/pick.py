@@ -12,8 +12,9 @@ from typing import Optional
 from . import projects
 from .constants import C
 from .config import (
-    check_for_updates, init_project, load_config, project_root, save_config,
+    init_project, load_config, project_root, save_config,
 )
+from .settings import check_for_updates
 from .delta import (
     delete_empty_dirs, mp_check_output, mp_exec, pico_cat, pico_list_files,
     pico_edit, sync_tree,
@@ -398,14 +399,13 @@ def _pick_port_settings_menu(port: Optional[str], src_root: str) -> Optional[str
 def _pick_config_menu(port: Optional[str], src_root: str) -> tuple:
     while True:
         action = _pick_item(
-            ["..", "port_settings", "src", "check_update", "init"],
+            ["..", "port_settings", "src", "init"],
             prompt="config> ",
             header=_("device_header"),
             preview=_build_preview({
                 "..": _("back_to_main"),
                 "port_settings": _("config_port_settings"),
                 "src": _("config_src"),
-                "check_update": _("config_check_update"),
                 "init": _("config_init"),
             }),
         )
@@ -423,9 +423,6 @@ def _pick_config_menu(port: Optional[str], src_root: str) -> tuple:
                     print(f"{C.GREEN}{_('config_src_ok', root=src_root)}{C.RESET}")
                 else:
                     print(f"{C.RED}{_('config_src_not_found', path=abs_src)}{C.RESET}")
-            _uinput(_("press_enter"))
-        elif action == "check_update":
-            check_for_updates()
             _uinput(_("press_enter"))
         elif action == "init":
             init_project(src_root)
@@ -455,7 +452,7 @@ def _pick_project_or_action() -> tuple:
             items.append(f"{p['name']}  ({p['root']})")
         items.append("[+] add project")
         items.append("[-] remove project")
-        items.append("[~] lang")
+        items.append("[s] settings")
         items.append("[q] quit")
 
         choice = _pick_item(
@@ -499,21 +496,35 @@ def _pick_project_or_action() -> tuple:
                     print(f"{C.GREEN}{_('project_removed', name=name)}{C.RESET}")
             continue
 
-        if choice == "[~] lang":
-            lang_choice = _pick_item(
-                ["..", "ua", "en"],
-                prompt="lang> ",
-                header=_("lang_select"),
+        if choice == "[s] settings":
+            settings_choice = _pick_item(
+                ["..", "[~] lang", "[!] check update"],
+                prompt="settings> ",
+                header=_("config_settings"),
                 preview=_build_preview({
                     "..": _("back_to_main"),
-                    "ua": _("lang_ua"),
-                    "en": _("lang_en"),
+                    "[~] lang": _("config_lang"),
+                    "[!] check update": _("config_check_update"),
                 }),
             )
-            if lang_choice and lang_choice in ("ua", "en"):
-                set_language(lang_choice)
-                lang_name = _("lang_ua") if lang_choice == "ua" else _("lang_en")
-                print(f"{C.GREEN}{_('lang_set', lang=lang_name)}{C.RESET}")
+            if settings_choice == "[~] lang":
+                lang_choice = _pick_item(
+                    ["..", "ua", "en"],
+                    prompt="lang> ",
+                    header=_("lang_select"),
+                    preview=_build_preview({
+                        "..": _("back_to_settings"),
+                        "ua": _("lang_ua"),
+                        "en": _("lang_en"),
+                    }),
+                )
+                if lang_choice and lang_choice in ("ua", "en"):
+                    set_language(lang_choice)
+                    lang_name = _("lang_ua") if lang_choice == "ua" else _("lang_en")
+                    print(f"{C.GREEN}{_('lang_set', lang=lang_name)}{C.RESET}")
+                    _uinput(_("press_enter"))
+            elif settings_choice == "[!] check update":
+                check_for_updates()
                 _uinput(_("press_enter"))
             continue
 

@@ -202,10 +202,14 @@ def main() -> None:
                     print(_("preview_add_project"))
                 elif "[-] remove project" in line:
                     print(_("preview_remove_project"))
+                elif "[s] settings" in line:
+                    print(_("config_settings"))
                 elif "[~] lang" in line:
                     lang = get_language()
                     lang_name = _("lang_ua") if lang == "ua" else _("lang_en")
                     print(_("preview_lang", lang=lang_name))
+                elif "[!] check update" in line:
+                    print(_("config_check_update"))
                 else:
                     print(_("preview_quit"))
                 exit(0)
@@ -280,7 +284,7 @@ def main() -> None:
         exit(0)
 
     if args.check_update:
-        from .config import check_for_updates
+        from .settings import check_for_updates
         check_for_updates()
         exit(0)
 

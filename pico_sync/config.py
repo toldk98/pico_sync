@@ -3,11 +3,10 @@
 
 import json
 import os
-import urllib.request
 
 from typing import Any
 
-from .constants import CONFIG_FILE, DEFAULT_CONFIG, DEFAULT_PICOIGNORE, C, PICO_SYNC_VERSION, VERSION_CHECK_URL
+from .constants import CONFIG_FILE, DEFAULT_CONFIG, DEFAULT_PICOIGNORE, C
 from .lang import _
 
 
@@ -113,35 +112,4 @@ def init_project(src_root: str) -> None:
         print(f"{C.YELLOW}{_('config_exists', file=CONFIG_FILE)}{C.RESET}")
 
 
-def check_for_updates() -> None:
-    """Check GitHub for a newer version. Prints result, fails silently on error.
 
-    No return value.
-    """
-    try:
-        with urllib.request.urlopen(VERSION_CHECK_URL, timeout=2) as r:
-            data = json.loads(r.read().decode())
-            latest = data.get("version")
-            changelog = data.get("changelog", "")
-            url = data.get(
-                "url", "https://github.com/toldk98/pico_sync/releases/latest"
-            )
-
-            if not latest:
-                return  # некоректний JSON
-
-            if latest != PICO_SYNC_VERSION:
-                print(f"{C.YELLOW}{_('update_available')}{C.RESET}")
-                print(f"  {_('latest_version', version=latest)}")
-                print(f"  {_('current_version', version=PICO_SYNC_VERSION)}")
-
-                if changelog:
-                    print(f"{C.BLUE}{_('changelog', text=changelog)}{C.RESET}")
-
-                print(_("download_url", url=url))
-            else:
-                print(
-                    f"{C.GREEN}{_('already_latest', version=PICO_SYNC_VERSION)}{C.RESET}"
-                )
-    except Exception as e:
-        pass  # fail silently
