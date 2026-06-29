@@ -86,7 +86,7 @@ def _pick_item(items: list, prompt: str = "> ", header: Optional[str] = None, pr
         print(f"  {i}) {item}")
     print()
     while True:
-        inp = input(prompt).strip()
+        inp = _uinput(prompt)
         if inp == "":
             return None
         if not inp.isdigit():

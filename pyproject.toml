@@ -3,7 +3,6 @@ name = "pico_sync"
 version = "1.1.0"
 description = "MicroPython deployment & synchronization tool for Raspberry Pi Pico"
 readme = "README_EN.md"
-long_description_content_type = "text/markdown"
 requires-python = ">=3.7"
 license = { text = "AGPL-3.0" }
 keywords = ["pico", "micropython", "deployment", "sync", "rp2040", "cli", "filesystem", "mpremote"]

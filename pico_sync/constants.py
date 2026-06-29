@@ -1,6 +1,12 @@
 # pico_sync/constants.py
 """Static constants and default values for pico_sync."""
 
+import os
+
+# Enable ANSI color codes in Windows console (10+)
+if os.name == "nt":
+    os.system("")
+
 # USB identification for Raspberry Pi Pico
 PICO_USB_VID = 0x2E8A
 PICO_KEYWORDS = ("Pico", "RP2", "MicroPython", "USB Serial Device")

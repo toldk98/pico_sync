@@ -250,7 +250,7 @@ def sync_tree(src_root: str, filter: str = "all") -> None:
                 print(_("skip_ignored", path=local))
                 continue
 
-            rpath = root.replace(src_root, "").strip("/")
+            rpath = root.replace(src_root, "").replace("\\", "/").strip("/")
             rdir = f"/{rpath}" if rpath else "/"
             remote = os.path.join(rdir, fname).replace("\\", "/")
 
