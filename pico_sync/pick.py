@@ -391,6 +391,13 @@ def _pick_port_settings_menu(port: Optional[str], src_root: str) -> Optional[str
                 _uinput(_("press_enter"))
 
             elif sub_action == "clear":
+                p = ensure_port(config.get("port"))
+                if not p:
+                    from .port import find_pico_port_auto
+                    p = find_pico_port_auto()
+                if p:
+                    os.environ["MPREMOTE_PORT"] = p
+                    mp_exec('import os; os.remove("/.piconame")')
                 save_config(p_root, {"piconame": ""})
                 print(f"{C.GREEN}{_('piconame_cleared')}{C.RESET}")
                 _uinput(_("press_enter"))

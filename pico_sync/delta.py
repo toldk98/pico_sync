@@ -244,6 +244,9 @@ def sync_tree(src_root: str, filter: str = "all") -> None:
         ]
 
         for fname in files:
+            if fname == '.piconame':
+                continue
+
             local = os.path.join(root, fname)
 
             if should_ignore(local, compiled_patterns, src_root):
@@ -278,6 +281,8 @@ def sync_tree(src_root: str, filter: str = "all") -> None:
         mp_write_file(remote, data)
 
     for remote_file in pico_files_before:
+        if remote_file == '/.piconame':
+            continue
         if remote_file not in local_files:
             if match_filter(filter, remote_file):
                 print(f"{C.RED}{_('delete_file', path=remote_file)}{C.RESET}")
