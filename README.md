@@ -27,7 +27,21 @@ pip install -r requirements.txt
 - Python 3.7+
 - `pyserial` — робота з serial-портами
 - `mpremote` — виконання команд на Pico
-- `fzf` (опціонально) — швидкий пошук і меню
+
+### Опціональні залежності
+
+- **`fzf`** — швидкий пошук і зручне меню замість нумерованого вводу. Не впливає на роботу pico_sync, але значно покращує UX:
+
+  | Система | Встановлення |
+  |---------|-------------|
+  | Linux (Debian/Ubuntu) | `sudo apt install fzf` |
+  | Linux (Arch) | `sudo pacman -S fzf` |
+  | Linux (Fedora) | `sudo dnf install fzf` |
+  | macOS | `brew install fzf` |
+  | Windows | `scoop install fzf` |
+  | Будь-яка | Завантажити binary: https://github.com/junegunn/fzf |
+
+  Після встановлення перезапустіть pico_sync — fzf підхопиться автоматично.
 
 ---
 

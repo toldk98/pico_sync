@@ -50,6 +50,26 @@ def _build_preview(mapping: dict) -> str:
     return " ".join(parts)
 
 
+_fzf_warned: bool = False
+
+
+def _suggest_fzf() -> None:
+    global _fzf_warned
+    if _fzf_warned:
+        return
+    _fzf_warned = True
+    if sys.platform == "win32":
+        cmd = "scoop install fzf"
+        url = "https://github.com/junegunn/fzf"
+    elif sys.platform == "darwin":
+        cmd = "brew install fzf"
+        url = "https://github.com/junegunn/fzf"
+    else:
+        cmd = "sudo apt install fzf"
+        url = "https://github.com/junegunn/fzf"
+    print(f"{C.YELLOW}{_('fzf_not_found', cmd=cmd, url=url)}{C.RESET}")
+
+
 def _pick_item(items: list, prompt: str = "> ", header: Optional[str] = None, preview: Optional[str] = None) -> Optional[str]:
     """Show interactive picker via fzf, fall back to numbered input.
 
@@ -79,6 +99,8 @@ def _pick_item(items: list, prompt: str = "> ", header: Optional[str] = None, pr
                 return r.stdout.strip()
         except:
             pass
+    else:
+        _suggest_fzf()
 
     print()
     if header:

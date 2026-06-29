@@ -177,6 +177,7 @@ UA = {
     "port_auto_detect": "Автоматично визначено порт: {port}",
 
     # preview hints
+    "fzf_not_found": "⚠️ fzf не знайдено. Для зручної навігації встановіть:\n   {cmd}\n   або завантажте: {url}\n",
     "preview_add_project": "Додати новий проект до списку",
     "preview_remove_project": "Видалити проект зі списку",
     "preview_lang": "Мова інтерфейсу: {lang}\n\nДоступно: ua (Українська), en (English)",
@@ -360,6 +361,7 @@ EN = {
     "port_auto_detect": "Auto-detected port: {port}",
 
     # preview hints
+    "fzf_not_found": "⚠️ fzf not found. For better navigation install:\n   {cmd}\n   or download: {url}\n",
     "preview_add_project": "Add a new project to the list",
     "preview_remove_project": "Remove a project from the list",
     "preview_lang": "Interface language: {lang}\n\nOptions: ua (Українська), en (English)",
