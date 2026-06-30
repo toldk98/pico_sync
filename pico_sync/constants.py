@@ -12,7 +12,7 @@ PICO_USB_VID = 0x2E8A
 PICO_KEYWORDS = ("Pico", "RP2", "MicroPython", "USB Serial Device")
 
 # Version
-PICO_SYNC_VERSION = "1.1.3"
+PICO_SYNC_VERSION = "1.1.4"
 VERSION_CHECK_URL = (
     "https://raw.githubusercontent.com/toldk98/pico_sync/main/meta/latest_version.json"
 )

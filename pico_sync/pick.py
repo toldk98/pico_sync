@@ -308,7 +308,7 @@ def _pick_device_menu(port: str, root: str, piconame: Optional[str] = None) -> t
 
         elif action == "reboot":
             print(f"{C.BLUE}{_('rebooting')}{C.RESET}")
-            subprocess.run(["mpremote", "reset"])
+            subprocess.run([sys.executable, "-m", "mpremote", "reset"])
             needs_refresh = True
 
 

@@ -287,7 +287,7 @@ def main() -> None:
 
     if args.reboot:
         print(f"{C.BLUE}{_('rebooting_cli')}{C.RESET}")
-        subprocess.run(["mpremote", "reset"])
+        subprocess.run([sys.executable, "-m", "mpremote", "reset"])
         exit(0)
 
     if args.check_update:
@@ -317,7 +317,8 @@ def main() -> None:
                 args.port = auto
                 print(f"{C.BLUE}{_('port_auto_detect', port=args.port)}{C.RESET}")
 
-    os.environ["MPREMOTE_PORT"] = args.port
+    if args.port:
+        os.environ["MPREMOTE_PORT"] = args.port
 
     if args.ls:
         pico_ls(args.ls)

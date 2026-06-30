@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+import sys
 import time
 import serial
 import serial.tools.list_ports as list_ports
@@ -47,7 +48,7 @@ def _read_piconame_from_port(device: str) -> Optional[str]:
     os.environ["MPREMOTE_PORT"] = device
     try:
         result = subprocess.check_output(
-            ["mpremote", "exec",
+            [sys.executable, "-m", "mpremote", "exec",
              'import os; print(open("/.piconame").read().strip())'],
             stderr=subprocess.DEVNULL, timeout=3
         ).decode().strip()
