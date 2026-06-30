@@ -46,10 +46,6 @@ def json_save(path: str, data: dict) -> None:
         f.write("\n")
 
 
-def project_root(src_root: str) -> str:
-    """Return parent directory of src_root (the project root)."""
-    return os.path.dirname(os.path.abspath(src_root))
-
 
 def load_config(project_root_path: str) -> dict:
     """Load .picosyncconfig from project root.
@@ -80,17 +76,16 @@ def save_config(project_root_path: str, data: dict) -> None:
     json_save(path, existing)
 
 
-def init_project(src_root: str) -> None:
-    """Create .picoignore, meta/, and .picosyncconfig in project root.
+def init_project(root: str) -> None:
+    """Create .picoignore and .picosyncconfig in project root.
 
     Skips creation if files already exist.
 
     Args:
-        src_root: Source directory path; project root is derived from it.
+        root: Project root directory path.
 
     No return value.
     """
-    root = project_root(src_root)
     picoignore = os.path.join(root, ".picoignore")
     if not os.path.exists(picoignore):
         with open(picoignore, "w") as f:
@@ -98,11 +93,6 @@ def init_project(src_root: str) -> None:
         print(f"{C.GREEN}{_('picoignore_created')}{C.RESET}")
     else:
         print(f"{C.YELLOW}{_('picoignore_exists')}{C.RESET}")
-
-    meta_dir = os.path.join(root, "meta")
-    if not os.path.exists(meta_dir):
-        os.makedirs(meta_dir)
-        print(f"{C.GREEN}{_('meta_created')}{C.RESET}")
 
     config_path = os.path.join(root, CONFIG_FILE)
     if not os.path.exists(config_path):

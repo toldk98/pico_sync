@@ -4,7 +4,7 @@ import tempfile
 
 import pytest
 
-from pico_sync.config import json_load, json_save, project_root, load_config, save_config, init_project
+from pico_sync.config import json_load, json_save, load_config, save_config, init_project
 
 
 class TestJsonIO:
@@ -50,14 +50,6 @@ class TestJsonIO:
             assert json_load(path) is None
 
 
-class TestProjectRoot:
-    def test_project_root(self):
-        assert project_root("/home/user/project/src") == "/home/user/project"
-
-    def test_project_root_trailing(self):
-        assert project_root("/home/user/project/src/") == "/home/user/project"
-
-
 class TestLoadSaveConfig:
     def test_load_missing(self):
         with tempfile.TemporaryDirectory() as td:
@@ -90,22 +82,15 @@ class TestLoadSaveConfig:
 class TestInitProject:
     def test_init_creates_all(self):
         with tempfile.TemporaryDirectory() as td:
-            src_dir = os.path.join(td, "src")
-            os.makedirs(src_dir)
-            init_project(src_dir)
+            init_project(td)
             assert os.path.exists(os.path.join(td, ".picoignore"))
-            assert os.path.isdir(os.path.join(td, "meta"))
             assert os.path.exists(os.path.join(td, ".picosyncconfig"))
 
     def test_init_skips_existing(self):
         with tempfile.TemporaryDirectory() as td:
-            src_dir = os.path.join(td, "src")
-            os.makedirs(src_dir)
             open(os.path.join(td, ".picoignore"), "w").close()
-            os.makedirs(os.path.join(td, "meta"), exist_ok=True)
-            init_project(src_dir)
+            init_project(td)
             assert os.path.exists(os.path.join(td, ".picoignore"))
-            assert os.path.isdir(os.path.join(td, "meta"))
 
 
 

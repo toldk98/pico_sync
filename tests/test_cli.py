@@ -16,7 +16,6 @@ class TestBuildParser:
     def test_parser_defaults(self):
         parser = build_parser()
         ns = parser.parse_args([])
-        assert ns.src == "src"
         assert ns.filter == "all"
         assert ns.lang is None
         assert ns.port is None
@@ -32,9 +31,8 @@ class TestBuildParser:
 
     def test_parser_options(self):
         parser = build_parser()
-        ns = parser.parse_args(["--port", "COM3", "--src", "firmware", "--filter", "py", "--lang", "en"])
+        ns = parser.parse_args(["--port", "COM3", "--filter", "py", "--lang", "en"])
         assert ns.port == "COM3"
-        assert ns.src == "firmware"
         assert ns.filter == "py"
         assert ns.lang == "en"
 
@@ -142,8 +140,6 @@ class TestMainDispatch:
     def test_main_init(self, monkeypatch):
         monkeypatch.setattr("sys.argv", ["picosync", "--init"])
         with tempfile.TemporaryDirectory() as td:
-            src_dir = os.path.join(td, "src")
-            os.makedirs(src_dir)
             monkeypatch.chdir(td)
             with pytest.raises(SystemExit) as exc:
                 main()

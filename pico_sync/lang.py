@@ -32,7 +32,6 @@ UA = {
     # config (init)
     "picoignore_created": ".picoignore створено",
     "picoignore_exists": ".picoignore вже існує",
-    "meta_created": "meta/ створено",
     "config_created": "{file} створено",
     "config_exists": "{file} вже існує",
     "update_available": "⚠ Доступне оновлення:",
@@ -44,15 +43,13 @@ UA = {
 
     # config (general)
     "config_port_set": "Порт встановлено: {port} (збережено)",
-    "config_src_change": "Поточна src: {root}\nНовий шлях src (Enter — залишити): ",
-    "config_src_ok": "Src змінено на: {root}",
-    "config_src_not_found": "Директорію не знайдено: {path}",
     "config_port_auto": "Порт з конфігу: {port}",
     "press_enter": "\nНатисніть Enter для продовження...",
 
     # pick (browser)
     "pico_empty": "⚠ Pico порожній або недоступний.",
     "pico_list_error": "⚠ Помилка читання файлів з Pico. Пристрій може бути недоступний.",
+    "mpremote_not_found": "⚠ mpremote не знайдено. Встановіть: pip install mpremote",
     "file_actions": " Esc=back  /=search   Дії з файлом",
     "back_to_files": "Повернутись до списку файлів",
     "cat_file": "Переглянути вміст файлу",
@@ -71,7 +68,7 @@ UA = {
     "device_monitor": "Відкрити серійний монітор Pico",
     "device_reboot": "Перезавантажити Pico",
     "current_filter": " Поточний фільтр: {filter}",
-    "filter_all": "Видалити всі файли на Pico і залити src/",
+    "filter_all": "Видалити всі файли на Pico і залити проєкт",
     "filter_py": "Тільки .py файли",
     "filter_py_plus": ".py, .txt, .json файли",
     "filter_nopy": "Все крім .py",
@@ -86,9 +83,10 @@ UA = {
 
     # pick (config menu)
     "config_port_settings": "Налаштування підключення Pico",
-    "config_src": "Змінити вихідну теку для синхронізації",
+    "config_baud": "Змінити швидкість порту (baud rate)",
+
     "config_check_update": "Перевірити наявність оновлень Pico Sync",
-    "config_init": "Створити .picoignore, meta/, .picosyncconfig",
+    "config_init": "Створити .picoignore, .picosyncconfig",
     "config_lang": "Змінити мову інтерфейсу",
     "back_to_main": "Повернутись до головного меню",
     "back_to_config": "Повернутись до налаштувань",
@@ -105,6 +103,10 @@ UA = {
     "piconame_not_on_pico": "На Pico не знайдено /.piconame",
     "piconame_cleared": "Ім'я пристрою очищено",
     "piconame_prompt": "Нове ім'я для Pico: ",
+    "baud_header": "Поточна швидкість: {baud}",
+    "baud_custom": "Ввести власне значення",
+    "baud_prompt": "Введіть baud rate (Enter — скасувати): ",
+    "baud_set": "Швидкість порту змінено на: {baud}",
     "lang_select": " Оберіть мову / Select language",
     "lang_ua": "Українська",
     "lang_en": "English",
@@ -138,11 +140,13 @@ UA = {
     "info_back_hint": "Натисніть Enter щоб повернутись",
     "info_piconame": "Ім'я пристрою: {name}",
     "info_piconame_not_found": "⚠ Pico з таким іменем не знайдено серед підключених пристроїв",
+    "info_baud": "Швидкість: {baud} baud",
 
     # cli (main)
     "cli_desc": "Pico Sync Tool — синхронізація/перегляд/редагування для Raspberry Pi Pico",
     "cli_port_help": "COM-порт Pico (авто-детект якщо не вказано)",
-    "cli_src_help": "Директорія для синхронізації",
+    "cli_baud_help": "Швидкість порту (baud rate, за замовчуванням 115200)",
+
     "cli_sync_help": "Синхронізувати src → Pico",
     "cli_ls_help": "Список файлів у директорії на Pico",
     "cli_cat_help": "Вивести вміст файлу з Pico",
@@ -153,7 +157,7 @@ UA = {
     "cli_monitor_help": "Серійний монітор Pico",
     "cli_pick_help": "Інтерактивний режим",
     "cli_filter_help": "Фільтр видалення: all, py, py+, nopy, або .ext,.ext2",
-    "cli_init_help": "Створити .picoignore та meta/ в поточній директорії",
+    "cli_init_help": "Створити .picoignore та .picosyncconfig в поточній директорії",
     "cli_set_name_help": "Записати NAME в /.piconame на Pico та зберегти в конфіг",
     "cli_lang_help": "Мова інтерфейсу (ua/en)",
     "cli_version_help": "Показати версію та вийти",
@@ -177,7 +181,6 @@ UA = {
     "port_auto_detect": "Автоматично визначено порт: {port}",
 
     # preview hints
-    "fzf_not_found": "⚠️ fzf не знайдено. Для зручної навігації встановіть:\n   {cmd}\n   або завантажте: {url}\n",
     "preview_add_project": "Додати новий проект до списку",
     "preview_remove_project": "Видалити проект зі списку",
     "preview_lang": "Мова інтерфейсу: {lang}\n\nДоступно: ua (Українська), en (English)",
@@ -185,7 +188,7 @@ UA = {
     "preview_back_projects": "Повернутись до списку проектів",
     "preview_browse_files": "Переглянути файли на Pico, читати/редагувати/видаляти",
     "preview_device_menu": "Синхронізувати файли, серійний монітор, перезавантажити Pico",
-    "preview_config_menu": "Налаштування: порт, src-тека, ім'я пристрою, перевірка оновлень, ініціалізація проекту",
+    "preview_config_menu": "Налаштування: порт, ім'я пристрою, швидкість, перевірка оновлень, ініціалізація проекту",
 }
 
 EN = {
@@ -216,7 +219,6 @@ EN = {
     # config (init)
     "picoignore_created": ".picoignore created",
     "picoignore_exists": ".picoignore already exists",
-    "meta_created": "meta/ created",
     "config_created": "{file} created",
     "config_exists": "{file} already exists",
     "update_available": "⚠ Update available:",
@@ -228,15 +230,13 @@ EN = {
 
     # config (general)
     "config_port_set": "Port set: {port} (saved)",
-    "config_src_change": "Current src: {root}\nNew src path (Enter to keep): ",
-    "config_src_ok": "Src changed to: {root}",
-    "config_src_not_found": "Directory not found: {path}",
     "config_port_auto": "Port from config: {port}",
     "press_enter": "\nPress Enter to continue...",
 
     # pick (browser)
     "pico_empty": "⚠ Pico empty or not accessible.",
     "pico_list_error": "⚠ Error reading files from Pico. Device may not be accessible.",
+    "mpremote_not_found": "⚠ mpremote not found. Install: pip install mpremote",
     "file_actions": " Esc=back  /=search   File actions",
     "back_to_files": "Back to file list",
     "cat_file": "View file content",
@@ -255,7 +255,7 @@ EN = {
     "device_monitor": "Open Pico serial monitor",
     "device_reboot": "Reboot Pico",
     "current_filter": " Current filter: {filter}",
-    "filter_all": "Delete all files from Pico and upload src/",
+    "filter_all": "Delete all files from Pico and upload project",
     "filter_py": "Only .py files",
     "filter_py_plus": ".py, .txt, .json files",
     "filter_nopy": "Everything except .py",
@@ -270,9 +270,10 @@ EN = {
 
     # pick (config menu)
     "config_port_settings": "Pico connection settings",
-    "config_src": "Change source directory for sync",
+    "config_baud": "Change port baud rate",
+
     "config_check_update": "Check for Pico Sync updates",
-    "config_init": "Create .picoignore, meta/, .picosyncconfig",
+    "config_init": "Create .picoignore, .picosyncconfig",
     "config_lang": "Change interface language",
     "back_to_main": "Back to main menu",
     "back_to_config": "Back to settings",
@@ -289,6 +290,10 @@ EN = {
     "piconame_not_on_pico": "No /.piconame found on Pico",
     "piconame_cleared": "Device name cleared",
     "piconame_prompt": "New name for Pico: ",
+    "baud_header": "Current baud rate: {baud}",
+    "baud_custom": "Enter custom value",
+    "baud_prompt": "Enter baud rate (Enter to cancel): ",
+    "baud_set": "Baud rate changed to: {baud}",
     "lang_select": " Select language / Оберіть мову",
     "lang_ua": "Українська",
     "lang_en": "English",
@@ -322,11 +327,13 @@ EN = {
     "info_back_hint": "Press Enter to go back",
     "info_piconame": "Device name: {name}",
     "info_piconame_not_found": "⚠ No Pico with this name found among connected devices",
+    "info_baud": "Baud rate: {baud}",
 
     # cli (main)
     "cli_desc": "Pico Sync Tool — sync/ls/cat/edit for Raspberry Pi Pico",
     "cli_port_help": "Pico COM port (auto-detect if omitted)",
-    "cli_src_help": "Source directory to sync",
+    "cli_baud_help": "Port baud rate (default 115200)",
+
     "cli_sync_help": "Synchronize src → Pico",
     "cli_ls_help": "List directory on Pico",
     "cli_cat_help": "Output file content from Pico",
@@ -337,7 +344,7 @@ EN = {
     "cli_monitor_help": "Live serial log monitor for Pico",
     "cli_pick_help": "Interactive pick mode",
     "cli_filter_help": "Delete filter: all, py, py+, nopy, or .ext,.ext2",
-    "cli_init_help": "Create default .picoignore and meta/ in current directory",
+    "cli_init_help": "Create default .picoignore and .picosyncconfig in current directory",
     "cli_set_name_help": "Write NAME to /.piconame on Pico and save to project config",
     "cli_lang_help": "Interface language (ua/en)",
     "cli_version_help": "Show version and exit",
@@ -361,7 +368,6 @@ EN = {
     "port_auto_detect": "Auto-detected port: {port}",
 
     # preview hints
-    "fzf_not_found": "⚠️ fzf not found. For better navigation install:\n   {cmd}\n   or download: {url}\n",
     "preview_add_project": "Add a new project to the list",
     "preview_remove_project": "Remove a project from the list",
     "preview_lang": "Interface language: {lang}\n\nOptions: ua (Українська), en (English)",
@@ -369,7 +375,7 @@ EN = {
     "preview_back_projects": "Back to project list",
     "preview_browse_files": "Browse Pico files, view/edit/delete",
     "preview_device_menu": "Sync files, serial monitor, reboot Pico",
-    "preview_config_menu": "Settings: port, src directory, device name, check updates, init project",
+    "preview_config_menu": "Settings: port, baud rate, device name, check updates, init project",
 }
 
 _LANG = "ua"

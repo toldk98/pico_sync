@@ -4,6 +4,7 @@ import tempfile
 import pytest
 
 from pico_sync import projects
+import time
 
 
 @pytest.fixture(autouse=True)
@@ -62,17 +63,10 @@ class TestProjects:
         with tempfile.TemporaryDirectory() as td1:
             with tempfile.TemporaryDirectory() as td2:
                 projects.add_project(td1, name="second")
-                import time
                 time.sleep(0.01)
                 projects.add_project(td2, name="first")
                 lst = projects.list_projects()
                 assert lst[0]["name"] == "first"  # newest first
-
-    def test_add_project_with_src(self):
-        with tempfile.TemporaryDirectory() as td:
-            projects.add_project(td, src="firmware")
-            lst = projects.list_projects()
-            assert lst[0]["src"] == "firmware"
 
     def test_add_project_custom_name(self):
         with tempfile.TemporaryDirectory() as td:

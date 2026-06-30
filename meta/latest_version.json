@@ -1,5 +1,6 @@
 {
-  "version": "1.1.2",
-  "changelog": "",
-  "url": "https://github.com/toldk98/pico_sync"
+  "version": "1.1.3",
+  "changelog": "Removed --src and meta/ from init; updated docs and l10n; README_EN.md rewrite with TOC and badges",
+  "url": "https://pypi.org/project/pico-sync/",
+  "github_url": "https://github.com/toldk98/pico_sync"
 }

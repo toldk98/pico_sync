@@ -1,435 +1,360 @@
 # Pico Sync Tool
 
-**Pico Sync** — a compact CLI tool for working with Raspberry Pi Pico / Pico W running MicroPython.
-Provides commands for file synchronization, filesystem browsing, basic file operations on the device,
-serial monitoring, and device reboot.
+**Pico Sync** — a compact CLI tool for convenient work with Raspberry Pi Pico / Pico W running MicroPython.
+Provides commands for file synchronization, file system browsing, basic file operations on the device,
+log monitoring, and board reset.
 
 Works on top of `mpremote`. Supports interactive mode with menus, fzf, language selection (UA/EN).
+
+The tool's goal is to make MicroPython development feel as close to working with a local project as possible.
+
+**Features:**
+
+- 🔄 **Sync** — upload files to Pico (src/ or root)
+- 🧠 **SHA-sync** — only changed files are uploaded (SHA-256)
+- 🗑 **Auto-delete extra files** — files on Pico that don't exist locally are removed
+- 🧼 **Empty directory cleanup** — after sync
+- ⛔ **`.picoignore`** — file ignoring (like `.gitignore`)
+- 📂 **File viewing and editing** — interactive browser (pick) or `--ls`/`--cat`/`--edit` (CLI)
+- 🔍 **Auto-detect port** — find Pico among serial ports: first by device name (if `.piconame` is set), then by saved port, otherwise — first available Pico
+- 🔌 **Serial monitor** — live log viewer from Pico
+- 🔁 **Reboot** — software board reset
+- 🌐 **Interface language** — Ukrainian / English
+- 📦 **Project management** — save projects with settings
+
+🌐 [Українська версія](https://github.com/toldk98/pico_sync/blob/main/README.md)
+
+📖 **Details:** [interactive mode (pick)](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_pick.md) · [CLI mode](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_cli.md)
+
+[![PyPI version](https://img.shields.io/pypi/v/pico-sync)](https://pypi.org/project/pico-sync/)
+[![CI](https://github.com/toldk98/pico_sync/actions/workflows/ci.yml/badge.svg)](https://github.com/toldk98/pico_sync/actions/workflows/ci.yml)
+
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [FAQ](#faq)
+- [License](#license)
 
 ---
 
 ## Installation
 
+### Linux
+
+**Recommended (pipx):**
+```bash
+pipx install pico_sync
+```
+Isolation in a separate environment, doesn't pollute the system.
+
+**Alternative (pip):**
 ```bash
 pip install pico_sync
 ```
+Can use `--user`:
+```bash
+pip install --user pico_sync
+```
 
-Or from GitHub:
+### Windows
+
+**Via pip:**
+```powershell
+pip install pico_sync
+```
+Requires Python 3.7+ installed and added to PATH.
+
+**Via pipx:**
+```powershell
+pipx install pico_sync
+```
+
+### macOS
+
+**Via pip:**
+```bash
+pip3 install pico_sync
+```
+
+**Via pipx:**
+```bash
+pipx install pico_sync
+```
+
+### From GitHub (any OS)
 
 ```bash
 git clone https://github.com/toldk98/pico_sync.git
 cd pico_sync
-pip install -r requirements.txt
+pip install .
+```
+
+### Portable version (no installation)
+
+```bash
+git clone https://github.com/toldk98/pico_sync.git
+cd pico_sync
+pip install pyserial mpremote
+python pico_sync_portable.py
 ```
 
 ### Dependencies
 
 - Python 3.7+
 - `pyserial` — serial port communication
-- `mpremote` — running commands on Pico
+- `mpremote` — execute commands on Pico
 
-### Optional Dependencies
+### Optional dependencies (for interactive mode)
 
-- **`fzf`** — fast search and interactive menus instead of numbered input. Does not affect pico_sync core functionality, but significantly improves UX:
+- **[fzf](https://github.com/junegunn/fzf)** — convenient menu selection. If not installed, numbered selection is used.
 
-  | System | Installation |
-  |--------|-------------|
-  | Linux (Debian/Ubuntu) | `sudo apt install fzf` |
-  | Linux (Arch) | `sudo pacman -S fzf` |
-  | Linux (Fedora) | `sudo dnf install fzf` |
-  | macOS | `brew install fzf` |
-  | Windows | `scoop install fzf` |
-  | Any | Download binary: https://github.com/junegunn/fzf |
+## Usage
 
-  After installation, restart pico_sync — fzf will be picked up automatically.
+### Launch
 
----
+- **Pick:** `picosync` or `picosync --pick`. Opens a menu with fzf (or numbered selection). [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_pick.md)
+- **CLI:** `picosync <options>`. Action flags without interactivity. [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_cli.md)
 
-## 1. Purpose
+### Start screen / Help
 
-The goal is to make MicroPython development feel as close as possible to working with a local project.
+- **Pick:** list of saved projects + `[+] add project`, `[-] remove project`, `[s] settings`, `[q] quit`. Select project → main menu.
+- **CLI:** `picosync --help` — all options; `picosync project --help` — project management.
 
-**Features:**
+### Sync
 
-- 🔄 **Sync** — upload files from `src/` to Pico (see [Interactive mode](#6-interactive-mode) or [CLI](#7-cli-reference-and-examples))
-- 🧠 **SHA-sync** — only changed files are uploaded (SHA-256)
-- 🗑 **Auto-removal** — files on Pico not present locally are deleted
-- 🧼 **Empty directory cleanup** — after sync
-- ⛔ **`.picoignore`** — ignore rules (like `.gitignore`)
-- 📂 **Interactive file browser** — view, read, edit, delete on Pico
-- 🔍 **Auto-detect port** — search for Pico among serial ports
-- 🔌 **Serial monitor** — live log output from Pico
-- 🔁 **Reboot** — software reset
-- 🌐 **Language** — Ukrainian / English
-- 📦 **Project management** — save projects with settings
+- **Pick:** `[d] device → sync` → filter selection from menu (all/py/py+/nopy/custom).
+- **CLI:** `picosync --sync [--filter py|py+|nopy|.ext,.ext2]`.
 
-The tool is ~246 KB, split into modules for maintainability and testing. Unneeded modules can be removed if desired.
+Algorithm (shared by both modes):
+1. Load `.picoignore` from project root
+2. Take a snapshot of all files on Pico
+3. Walk the local directory (src/ or root), collect files for sync (skip ignored and `.piconame`)
+4. Run SHA-256 on all Pico files in one request
+5. Compare hashes: match → skip, missing → upload, different → update
+6. Delete files on Pico without local match (respecting filter)
+7. Clean empty directories
 
----
+### Files (view, edit, delete)
 
-## 2. Usage
+- **Pick:** `[f] files` — browser with directory navigation, `[*] find` — search all files; cat/edit/rm in file context menu. Editor: nano/vim (Linux), TextEdit (macOS), notepad (Windows). [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_pick.md)
+- **CLI:** `picosync --ls /` — list root; `picosync --ls /spm` — list directory; `picosync --cat /main.py` — content; `picosync --edit /config.py` — editing. [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_cli.md)
 
-The tool can be run in different modes:
+### Serial monitor
 
-```bash
-# Interactive mode (menus, browser, sync) — [section 6](#6-interactive-mode)
-picosync
+- **Pick:** `[d] device → monitor`
+- **CLI:** `picosync --monitor`
 
-# CLI mode (one-shot commands) — [section 7](#7-cli-reference-and-examples)
-picosync --sync
-picosync --ls /main.py
-picosync --monitor
+Exit: `Ctrl+C`. Auto-reconnect on reboot/port change.
 
-# As a Python module
-python -m pico_sync
+### Reboot
+
+- **Pick:** `[d] device → reboot`
+- **CLI:** `picosync --reboot`
+
+Software reset via `mpremote reset`.
+
+### Device name (piconame)
+
+- **Pick:** `[c] config → port_settings → piconame` → detect (read from Pico), set (write new), clear (delete + clear config).
+- **CLI:** `picosync --set-name <name>` — writes `/.piconame` to Pico and saves to config.
+
+### Project settings
+
+- **Pick:** `[c] config` → port_settings/baud/piconame/init.
+- **CLI:** `picosync --port /dev/ttyACM0 --sync`, `picosync --init`, `picosync --search_port`.
+
+### Project management
+
+- **Pick:** start screen — `[+] add project` (enter path), `[-] remove project` (select from list). [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_pick.md)
+- **CLI:** `picosync project list`, `picosync project add /path`, `picosync project remove <name>`. [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_cli.md)
+
+### Global settings
+
+- **Pick:** `[s] settings` → `[~] lang` (switch UA/EN), `[!] check update` (check for updates). [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_pick.md)
+- **CLI:** `picosync --lang ua/en`, `picosync --check_update`, `LANG=ua` / `LANG=en` — environment variable. [→ details](https://github.com/toldk98/pico_sync/blob/main/docs/en/users/readme_cli.md)
+
+## Configuration
+
+### Global settings
+
+File: `~/.config/pico_sync/settings.json`
+
+```json
+{
+  "language": "ua"
+}
 ```
 
----
+- **language** — interface language: `"ua"` or `"en"`. Auto-detected: first from file, then from `$LANG` (if `uk*` → `"ua"`, otherwise → `"en"`). Changed:
+  - **Pick:** `[s] settings → [~] lang`
+  - **CLI:** `--lang ua/en`
+  - **Shared:** `LANG=ua` / `LANG=en`
 
-## 3. Project structure
+### Project system
 
+File: `~/.config/pico_sync/projects.json`
+
+```json
+{
+  "projects": [
+    {
+      "name": "my-project",
+      "root": "/home/user/projects/my-project",
+      "last_used": "2026-06-29T12:00:00"
+    }
+  ]
+}
 ```
-project_root/
-│
-├── .picoignore           # ignore rules
-├── .picosyncconfig       # project config (port, filter)
-├── meta/                 # metadata (updates, etc.)
-│
-└── src/                  # files synced to Pico
+
+Each project contains:
+- `name` — name (basename of root directory)
+- `root` — absolute path to root
+- `last_used` — last used date (ISO 8601)
+
+Projects are sorted by `last_used` descending.
+
+### Project file `.picosyncconfig`
+
+File: `<project_root>/.picosyncconfig`
+
+```json
+{
+  "port": "",
+  "filter": "all",
+  "piconame": ""
+}
 ```
 
-⚠️ **Important:**
-1. `.picoignore` only affects files inside `src/`
-2. Only `src/` is synced — files outside never reach Pico
+| Field | Type | Description |
+|-------|------|-------------|
+| `port` | `str` | Pico port (e.g. `/dev/ttyACM0`). Empty = auto-detect |
+| `filter` | `str` | Sync filter: all, py, py+, nopy, .ext,.ext2 |
+| `piconame` | `str` | Device name for name-based search. Empty = not used |
 
----
+Created:
+- **Pick:** `[c] config → init`
+- **CLI:** `picosync --init`
 
-## 4. The .picoignore file
+### `.picoignore`
 
-Ignore rules follow a syntax similar to `.gitignore`.
+Works like `.gitignore`. Examples:
 
-**Examples:**
+```gitignore
+# ignore secret.py
+secret.py
 
+# ignore entire directory
+data/
+
+# ignore by extension
+*.mpy
 ```
-# Ignore caches
+
+Supports:
+- `*` — any number of characters
+- `?` — single character
+- `[abc]` — character from set
+- `**` — any nesting level
+- `!` — negation (don't ignore)
+- Lines without `/` apply to all levels; with `/` — to a specific path
+
+Default `.picoignore`:
+```
 __pycache__/
 *.pyc
-
-# Recursively ignore all .log files
-**/*.log
-
-# Specific file
-config/local_settings.py
-
-# Directory
-tests/
+.git/
+.DS_Store
+Thumbs.db
+dist/
+*.egg-info/
+build/
+.idea/
+*.swp
+*.swo
 ```
-
-**Supported patterns:**
-
-| Pattern | Description |
-|---------|-------------|
-| `*` | Any characters within a directory |
-| `**` | Recursive multi-level match |
-| `?` | Single character |
-| `dir/` | Entire directory |
-| `*.ext` | File mask |
-
----
-
-## 5. Technical details
-
-### SHA-sync
-
-1. Each local file gets its SHA-256 calculated
-2. Pico computes SHA-256 of all remote files via a single mpremote exec
-3. If hashes match → file is skipped
-4. If hashes differ or file is missing → file is uploaded
-5. Files on Pico not present locally are deleted
-6. Empty directories are removed
 
 ### Port
 
-Port detection order:
-1. If `piconame` is configured in `.picosyncconfig` — find Pico whose `/.piconame` matches
-2. Value from `.picosyncconfig` `port` field (if set)
-3. Auto-detect: scan serial devices by USB VID. If multiple Picos found — the first one is used
-4. If nothing found — a message about missing port is shown
+The tool finds Pico in this order:
+1. By **.piconame** (if set) — iterates all Pico ports, reads `/.piconame` from each
+2. By **port** from config — uses saved port
+3. **Auto-detect** — finds first device with Raspberry Pi USB ID (0x2E8A)
+4. If nothing found:
+   - **Pick:** `[c] config → port_settings → port` for manual selection
+   - **CLI:** `picosync --search_port` for manual selection
 
-The port is stored in `os.environ["MPREMOTE_PORT"]`.
+### Piconame
 
-#### .piconame
+Optional device name stored in `/.piconame` on Pico. Allows identifying a specific board when multiple Picos are connected.
 
-`/.piconame` is an optional text file identifier on the Pico itself.
-It can be created manually or via `picosync --set-name my-device`. When `piconame` is set in the project config, pico_sync will find the exact Pico with the matching name, even when multiple devices are connected.
+Management:
+- **Pick:** `[c] config → port_settings → piconame` with options detect (read from Pico), set (write new), clear (delete from Pico and clear config)
+- **CLI:** `picosync --set-name <name>` — write name to Pico and save to config
 
-### BAUD = 115200
-
-Standard MicroPython serial speed on RP2040.
-Used in monitor mode (`--monitor`).
-
----
-
-## 6. Interactive mode
-
-Without arguments (or with `--pick`) the interactive mode starts.
-
-On first launch you will see a list of saved projects. If no projects exist yet — a prompt to add the current directory. After selecting a project (or adding a new one), you enter the project's main menu.
-
-### Main menu
-
-```
-..          — back to project list
-[i] info    — project info (read-only)
-[f] files   — Pico file browser
-[d] device  — sync, monitor, reboot
-[c] config  — port, src, update settings, init
-```
-
-### File browser
-
-Browse the Pico file tree. Actions per file:
-- `cat` — print contents
-- `edit` — edit in system editor
-- `rm` — delete
-- `[r] refresh` — refresh file list
-- `[*] find` — search all files
-
-### Device
-
-- `sync` — sync with filter selection
-- `monitor` — serial monitor
-- `reboot` — reboot Pico
-
-### Config
-
-- `port_settings` — Pico connection settings: manual port selection or auto-find by device name
-- `check_update` — check for updates
-- `init` — create `.picoignore`, `meta/`, `.picosyncconfig`
-
-### Language
-
-`[~] lang` in the project list switches language.
+`.piconame` is automatically excluded from sync (not deleted, not uploaded).
 
 ### Sync filters
 
+Only affect **deletion** of extra files from Pico. All files are uploaded regardless of filter.
+
 | Filter | Description |
 |--------|-------------|
-| `all` | All files (removes extras on Pico) |
+| `all` | All files (deletes extras on Pico) |
 | `py` | Only `.py` |
 | `py+` | `.py`, `.txt`, `.json` |
 | `nopy` | Everything except `.py` |
 | `.ext,.ext2` | Custom comma-separated extensions |
 
-### Example session
-
-```
-$ picosync
-
-  [1] my-project  (/home/user/projects/my-project)
-  [+] add project
-  [~] lang
-
-> 1                         # select project
-
-  ..  — back to project list
-  [i] info    — project information
-  [f] files   — Pico file browser
-  [d] device  — sync, monitor, reboot
-  [c] config  — settings
-
-> d                         # device menu
-
-  sync
-  monitor
-  reboot
-
-> sync                      # sync files
-  filter (all):
-  Files: 12, synced: 3, skipped: 9
-```
-
----
-
-## 7. CLI reference and examples
-
-### Help
-
-```bash
-picosync --help
-```
-
-```
-usage: picosync [-h] [--port PORT] [--src SRC] [--sync] [--ls PATH]
-                [--cat FILE] [--edit FILE] [--search_port] [--check_update]
-                [--reboot] [--monitor] [--pick] [--filter FILTER] [--init]
-                [--lang {ua,en}] [--version]
-                {project} ...
-
-Pico Sync Tool — sync/ls/cat/edit for Raspberry Pi Pico
-
-options:
-  -h, --help            Show help
-  --port PORT           Pico COM port (auto-detect if not set)
-  --src SRC             Sync directory (default: src)
-  --sync                Sync src → Pico
-  --ls PATH             List files in a Pico directory
-  --cat FILE            Print file contents
-  --edit FILE           Edit a remote file
-  --search_port         Interactive serial port search
-  --check_update        Check for updates
-  --reboot              Reboot Pico
-  --monitor             Serial monitor
-  --pick                Interactive mode
-  --filter FILTER       Sync filter (default: all)
-  --init                Create .picoignore and meta/
-  --set-name NAME       Write /.piconame to Pico and save to config
-  --lang {ua,en}        Interface language
-  --version             Version
-```
-
-### Sync
-
-```bash
-picosync --sync                          # all files
-picosync --sync --filter py              # .py only
-picosync --sync --filter .wav,.mpy       # custom extensions
-picosync --src my_src --sync             # custom src
-```
-
-### File listing
-
-```bash
-picosync --ls /
-picosync --ls /spm
-picosync --cat /main.py
-```
-
-### Editing
-
-```bash
-picosync --edit /config/settings.py
-```
-
-The file is downloaded to a temp file, opened in an editor, and uploaded back on save.
-
-### Port search
-
-```bash
-picosync --search_port
-```
-
-### Monitor
-
-```bash
-picosync --monitor
-```
-
-Auto-reconnects on:
-- Pico reboot
-- USB port change
-- temporary disconnection
-
-### Reboot
-
-```bash
-picosync --reboot
-```
-
-Software reset via `mpremote reset` — equivalent to pressing RUN.
-
-### Version
-
-```bash
-picosync --version
-```
-
----
-
-## 8. Project system
-
-Projects are stored in `~/.config/pico_sync/projects.json`.
-Each project stores its path, port setting, sync filter, and last used src.
-
-### Managing projects
-
-```bash
-picosync project list          # list projects
-picosync project add /path     # add an existing directory
-picosync project remove name   # remove project from list
-```
-
-In interactive mode, projects are shown on the start screen.
-`[+] add project` adds the current directory, `[~] lang` switches language.
-
----
-
-## 9. User guide
-
-### ✔ Step 1. Install
-
-```bash
-pip install pico_sync
-```
-
-### ✔ Step 2. Prepare project
-
-```
-project/
-├── .picoignore
-└── src/
-    └── main.py
-```
-
-### ✔ Step 3. Connect Pico via USB
-
-### ✔ Step 4. Run
-
-```bash
-picosync
-```
-
-The project list will appear. If no projects exist yet — a prompt to add the current directory.
-Select a project or add a new one — you enter the main menu.
-
-### ✔ Step 5. Configure port (optional)
-
-Pico_sync automatically detects Pico among serial ports. If only one device is connected — no configuration needed.
-
-If auto-detect fails or multiple Picos are connected — `[c] config → port` for manual selection.
-
-### ✔ Step 6. Sync
-
-`[d] device → sync` — select a filter and sync.
-
-### ✔ Step 7. Work with files
-
-`[f] files` — browse, edit, delete.
-
----
-
-## 10. FAQ
+## FAQ
 
 ### Pico not found / port not detected
-Make sure Pico is connected via USB data cable (power-only cables won't work). If auto-detect fails — use `picosync --search_port` for manual selection.
 
-### Two Picos connected at once
-Auto-detect picks the first one found. To work with a specific device — configure `.piconame` via `picosync --set-name <name>` or `[c] config → piconame → set`.
+Make sure Pico is connected with a USB cable (not just power). If auto-detect fails:
 
-### Files not syncing / not all files on Pico
-Check `.picoignore` — the file might match an ignore rule. By default the `src/` directory is synced.
+- **Pick:** `[c] config → port_settings → port` for manual selection from serial port list
+- **CLI:** `picosync --search_port` for interactive selection from serial port list
+
+### Two Picos connected simultaneously
+
+Auto-detect picks the first one found. To work with a specific device:
+
+- **Pick:** `[c] config → port_settings → piconame → set`, give it a unique name
+- **CLI:** `picosync --set-name <name>`, give it a unique name
+
+### How to install fzf?
+
+`fzf` is an optional tool for convenient menu navigation in interactive mode. Without it, numbered input works. Not needed for CLI mode.
+
+- **Linux:** `sudo apt install fzf` (or `pacman -S fzf`, `dnf install fzf`)
+- **macOS:** `brew install fzf`
+- **Windows:** download binary from https://github.com/junegunn/fzf/releases
+
+### Files not syncing
+
+Check `.picoignore` — the file might match an ignore rule. If `src/` exists in root, it is synced; otherwise, the root.
 
 ### Error "No module named 'pyserial' / 'mpremote'"
-Install dependencies: `pip install pyserial mpremote`
+
+Install dependencies: `pip install pyserial mpremote` (only relevant for portable version without package installation).
 
 ### How to update Pico Sync?
-```bash
-pip install --upgrade pico_sync
-```
-Or `[c] config → check_update` in interactive mode.
 
----
+**Check for updates:** `[s] settings → [!] check update` (pick) or `picosync --check_update` (CLI). Shows newer version, changelog, and links but does not update automatically.
+
+**Install update:**
+- **Via pipx:** `pipx upgrade pico_sync`
+- **Via pip:** `pip install --upgrade pico_sync`
+
+### How to get full help?
+
+**CLI:** `picosync --help`, `picosync project --help`
+
+In pick mode, all available actions are shown in the menu.
 
 ## License
 
-AGPL-3.0
+[AGPL-3.0](https://github.com/toldk98/pico_sync/blob/main/LICENSE)

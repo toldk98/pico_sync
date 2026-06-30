@@ -12,33 +12,27 @@ import shutil
 from typing import Optional
 
 from .constants import C
-from .config import project_root
 from .filter import match_filter
 from .ignore import compile_ignore_patterns, load_ignore_list, should_ignore
 from .lang import _
 
 
 def mp_exec(code: str) -> None:
-    """Run MicroPython code on Pico via mpremote exec.
-
-    Args:
-        code: MicroPython code string.
-
-    No return value.
-    """
-    subprocess.run(["mpremote", "exec", code], check=True)
+    try:
+        subprocess.run([sys.executable, "-m", "mpremote", "exec", code], check=True)
+    except FileNotFoundError:
+        print(f"{C.RED}{_('mpremote_not_found')}{C.RESET}")
+        sys.exit(1)
 
 
 def mp_check_output(code: str) -> str:
-    """Run MicroPython code on Pico via mpremote exec, return stdout.
-
-    Args:
-        code: MicroPython code string.
-
-    Returns:
-        Decoded stdout string.
-    """
-    return subprocess.check_output(["mpremote", "exec", code]).decode()
+    try:
+        return subprocess.check_output(
+            [sys.executable, "-m", "mpremote", "exec", code]
+        ).decode()
+    except FileNotFoundError:
+        print(f"{C.RED}{_('mpremote_not_found')}{C.RESET}")
+        sys.exit(1)
 
 
 def local_sha256(data: bytes) -> str:
@@ -143,14 +137,6 @@ def pico_list_files() -> Optional[list]:
 
 
 def pico_batch_sha256(paths: list) -> dict:
-    """Compute SHA-256 of multiple files on Pico in one mpremote call.
-
-    Args:
-        paths: List of remote file paths.
-
-    Returns:
-        Dict of {path: sha_hex or None} — None means file missing on Pico.
-    """
     if not paths:
         return {}
 
@@ -171,7 +157,11 @@ def pico_batch_sha256(paths: list) -> dict:
         "    except OSError:\n"
         "        print('--', p)\n"
     )
-    out = mp_check_output(code)
+    try:
+        out = mp_check_output(code)
+    except subprocess.CalledProcessError:
+        print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+        return {}
     result = {}
     for line in out.splitlines():
         if line.startswith("OK "):
@@ -184,10 +174,6 @@ def pico_batch_sha256(paths: list) -> dict:
 
 
 def delete_empty_dirs() -> None:
-    """Recursively remove empty directories on Pico.
-
-    No return value. Prints removed dirs to stdout.
-    """
     code = (
         "import os\n"
         "def clean(p):\n"
@@ -208,25 +194,30 @@ def delete_empty_dirs() -> None:
         "    return False\n"
         "clean('/')\n"
     )
-
-    out = mp_check_output(code)
+    try:
+        out = mp_check_output(code)
+    except subprocess.CalledProcessError:
+        return
     if out.strip():
         print(out)
 
 
-def sync_tree(src_root: str, filter: str = "all") -> None:
-    """Sync src_root to Pico: upload new/changed files, delete missing ones.
+def sync_tree(root: str, filter: str = "all") -> None:
+    """Sync root to Pico: upload new/changed files, delete missing ones.
 
     Uses SHA-256 delta comparison. Respects .picoignore and delete filter.
+    Auto-detects src/ subdirectory if present (backward compat).
 
     Args:
-        src_root: Local source directory path.
+        root: Project root directory path.
         filter: Delete filter — all, py, py+, nopy, or custom extensions.
 
     No return value.
     """
-    p_root = project_root(src_root)
-    raw_patterns = load_ignore_list(p_root)
+    src_root = os.path.join(root, "src")
+    if not os.path.isdir(src_root):
+        src_root = root
+    raw_patterns = load_ignore_list(root)
     compiled_patterns = compile_ignore_patterns(raw_patterns)
     print(_("ignore_patterns", patterns=raw_patterns))
     print(_("delete_filter", filter=filter))
@@ -278,7 +269,11 @@ def sync_tree(src_root: str, filter: str = "all") -> None:
         else:
             print(f"{C.GREEN}{_('upload_diff', local=local, remote=remote)}{C.RESET}")
 
-        mp_write_file(remote, data)
+        try:
+            mp_write_file(remote, data)
+        except subprocess.CalledProcessError:
+            print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+            return
 
     for remote_file in pico_files_before:
         if remote_file == '/.piconame':
@@ -286,19 +281,16 @@ def sync_tree(src_root: str, filter: str = "all") -> None:
         if remote_file not in local_files:
             if match_filter(filter, remote_file):
                 print(f"{C.RED}{_('delete_file', path=remote_file)}{C.RESET}")
-                mp_exec(f"import os; os.remove({repr(remote_file)})")
+                try:
+                    mp_exec(f"import os; os.remove({repr(remote_file)})")
+                except subprocess.CalledProcessError:
+                    print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+                    return
 
     print(_("sync_complete"))
 
 
 def pico_ls(path: str) -> None:
-    """List directory contents on Pico (d/ prefix for directories).
-
-    Args:
-        path: Remote directory path on Pico.
-
-    No return value. Prints to stdout.
-    """
     code = (
         "import os\n"
         f"p={repr(path)}\n"
@@ -311,20 +303,21 @@ def pico_ls(path: str) -> None:
         " except: pass\n"
         "print('\\n'.join(files))\n"
     )
-
-    print(mp_check_output(code))
+    try:
+        out = mp_check_output(code)
+    except subprocess.CalledProcessError:
+        print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+        return
+    print(out)
 
 
 def pico_cat(path: str) -> None:
-    """Print file content from Pico to stdout.
-
-    Args:
-        path: Remote file path on Pico.
-
-    No return value.
-    """
     code = "import sys\n" f"f=open({repr(path)},'r')\n" "sys.stdout.write(f.read())\n"
-    out = mp_check_output(code)
+    try:
+        out = mp_check_output(code)
+    except subprocess.CalledProcessError:
+        print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+        return
     print(out)
 
 
@@ -340,13 +333,6 @@ def _find_editor() -> Optional[list]:
 
 
 def pico_edit(path: str) -> None:
-    """Download a file from Pico, edit in editor, upload changes back.
-
-    Args:
-        path: Remote file path on Pico.
-
-    No return value.
-    """
     code = (
         "import sys\n"
         f"try:\n"
@@ -355,7 +341,11 @@ def pico_edit(path: str) -> None:
         "except:\n"
         "    pass\n"
     )
-    original = mp_check_output(code)
+    try:
+        original = mp_check_output(code)
+    except subprocess.CalledProcessError:
+        print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+        return
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".py")
     tmp_path = tmp.name
@@ -376,6 +366,11 @@ def pico_edit(path: str) -> None:
         data = f.read()
 
     print(f"{C.GREEN}{_('upload_from_edit', path=path)}{C.RESET}")
-    mp_write_file(path, data)
+    try:
+        mp_write_file(path, data)
+    except subprocess.CalledProcessError:
+        print(f"{C.RED}{_('pico_list_error')}{C.RESET}")
+        os.remove(tmp_path)
+        return
 
     os.remove(tmp_path)

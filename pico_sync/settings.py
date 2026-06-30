@@ -44,9 +44,8 @@ def check_for_updates() -> None:
             data = json.loads(r.read().decode())
             latest = data.get("version")
             changelog = data.get("changelog", "")
-            url = data.get(
-                "url", "https://github.com/toldk98/pico_sync/releases/latest"
-            )
+            url = data.get("url", "https://pypi.org/project/pico-sync/")
+            github_url = data.get("github_url", "https://github.com/toldk98/pico_sync")
 
             if not latest:
                 return
@@ -60,6 +59,8 @@ def check_for_updates() -> None:
                     print(f"{C.BLUE}{_('changelog', text=changelog)}{C.RESET}")
 
                 print(_("download_url", url=url))
+                print(f"  GitHub: {github_url}")
+                print(f"  pip install --upgrade pico_sync")
             else:
                 print(
                     f"{C.GREEN}{_('already_latest', version=PICO_SYNC_VERSION)}{C.RESET}"

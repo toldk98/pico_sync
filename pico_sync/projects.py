@@ -15,13 +15,23 @@ PROJECTS_FILE = os.path.join(CONFIG_DIR, "projects.json")
 def _load_projects() -> list:
     """Read projects list from ~/.config/pico_sync/projects.json.
 
+    Strips legacy 'src' key from old entries and persists the cleanup.
+
     Returns:
         List of project dicts, or empty list if file missing or malformed.
     """
     data = json_load(PROJECTS_FILE)
     if data is None:
         return []
-    return data.get("projects", []) if isinstance(data, dict) else []
+    projects = data.get("projects", []) if isinstance(data, dict) else []
+    changed = False
+    for p in projects:
+        if "src" in p:
+            p.pop("src", None)
+            changed = True
+    if changed:
+        _save_projects(projects)
+    return projects
 
 
 def _save_projects(projects: list) -> None:
@@ -35,13 +45,12 @@ def _save_projects(projects: list) -> None:
     json_save(PROJECTS_FILE, {"projects": projects})
 
 
-def add_project(root: str, name: Optional[str] = None, src: str = "src") -> bool:
+def add_project(root: str, name: Optional[str] = None) -> bool:
     """Add or update a project in the global projects list.
 
     Args:
         root: Project root directory path.
         name: Display name (defaults to basename of root).
-        src: Source subdirectory relative to root (default: 'src').
 
     Returns:
         True if a new project was added, False if an existing one was updated.
@@ -54,7 +63,6 @@ def add_project(root: str, name: Optional[str] = None, src: str = "src") -> bool
     for p in projects:
         if os.path.abspath(p["root"]) == abs_root:
             p["name"] = name
-            p["src"] = src
             p["last_used"] = datetime.now().isoformat()
             _save_projects(projects)
             return False
@@ -62,7 +70,6 @@ def add_project(root: str, name: Optional[str] = None, src: str = "src") -> bool
     projects.append({
         "name": name,
         "root": abs_root,
-        "src": src,
         "last_used": datetime.now().isoformat(),
     })
     _save_projects(projects)

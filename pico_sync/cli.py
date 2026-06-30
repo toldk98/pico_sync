@@ -9,7 +9,7 @@ import sys
 
 from . import projects
 from .constants import C, PICO_SYNC_VERSION
-from .config import load_config, project_root, save_config, init_project
+from .config import load_config, save_config, init_project
 from .delta import (
     delete_empty_dirs, mp_exec, pico_cat, pico_edit, pico_ls, sync_tree,
 )
@@ -29,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument("--port", default=None, help=_("cli_port_help"))
-    parser.add_argument("--src", default="src", help=_("cli_src_help"))
+    parser.add_argument("--baud", type=int, default=None, help=_("cli_baud_help"))
 
     parser.add_argument("--sync", action="store_true", help=_("cli_sync_help"))
     parser.add_argument("--ls", metavar="PATH", help=_("cli_ls_help"))
@@ -103,12 +103,12 @@ def _print_project_preview(proj: dict) -> None:
     """Print plain-text project summary for fzf preview panels.
 
     Args:
-        proj: Project dict with name, root, src keys.
+        proj: Project dict with name, root keys.
     """
-    src_root = os.path.join(proj["root"], proj["src"])
     config = load_config(proj["root"])
     port = config.get("port")
     piconame = config.get("piconame", "")
+    current_baud = config.get("baud", 115200)
     current_filter = config.get("filter", "all")
     pico_ports = find_pico_ports()
     detected = {dev.device for dev in pico_ports}
@@ -123,7 +123,11 @@ def _print_project_preview(proj: dict) -> None:
     status = _("info_connected") if configured in detected else _("info_not_found")
     print(f"{_('info_project', name=proj['name'])}")
     print(f"{_('info_root', path=proj['root'])}")
-    print(f"{_('info_source', path=src_root)}")
+    src_path = os.path.join(proj["root"], "src")
+    if os.path.isdir(src_path):
+        print(f"{_('info_source', path=src_path)}")
+    else:
+        print(f"{_('info_source', path=proj['root'])}")
     print(f"{_('info_device', port=configured, status=status)}")
     if piconame:
         print(f"{_('info_piconame', name=piconame)}")
@@ -133,6 +137,7 @@ def _print_project_preview(proj: dict) -> None:
             mark = _("info_configured") if d == configured else ""
             print(f"            {d}{mark}")
     print(f"{_('info_filter', filter=filter_description(current_filter))}")
+    print(f"{_('info_baud', baud=current_baud)}")
 
 
 def _run_interactive(args: argparse.Namespace) -> None:
@@ -142,11 +147,11 @@ def _run_interactive(args: argparse.Namespace) -> None:
             exit(0)
         if project:
             projects.touch_project(project["root"])
-            src_root = os.path.join(project["root"], project["src"])
+            root = project["root"]
         else:
-            src_root = os.path.join(os.getcwd(), args.src)
-            projects.add_project(os.getcwd(), src=args.src)
-        pick_mode(src_root, project=project)
+            root = os.getcwd()
+            projects.add_project(root)
+        pick_mode(root, project=project)
 
 
 def main() -> None:
@@ -164,6 +169,9 @@ def main() -> None:
 
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.baud is not None:
+        save_config(os.getcwd(), {"baud": args.baud})
 
     if args.version:
         print(f"pico_sync {PICO_SYNC_VERSION}")
@@ -241,21 +249,20 @@ def main() -> None:
         exit(0)
 
     if args.init:
-        init_project(os.path.join(os.getcwd(), args.src))
+        init_project(os.getcwd())
         exit(0)
 
     if args.set_name:
-        from .config import load_config, project_root, save_config
+        from .config import load_config, save_config
         from .port import ensure_port, find_pico_port_auto
-        p_root = project_root(os.path.join(os.getcwd(), args.src))
-        config = load_config(p_root)
+        config = load_config(os.getcwd())
         port = config.get("port") or find_pico_port_auto()
         if not port:
             print(f"{C.RED}{_('port_not_found')}{C.RESET}")
             exit(1)
         os.environ["MPREMOTE_PORT"] = port
         mp_exec(f'with open("/.piconame", "w") as f: f.write({repr(args.set_name)})')
-        save_config(p_root, {"piconame": args.set_name})
+        save_config(os.getcwd(), {"piconame": args.set_name})
         name = args.set_name
         print(f"{C.GREEN}{_('piconame_set', name=name)}{C.RESET}")
         exit(0)
@@ -299,8 +306,7 @@ def main() -> None:
         args.port = chosen
 
     if not args.port:
-        p_root = project_root(os.path.join(os.getcwd(), args.src))
-        config = load_config(p_root)
+        config = load_config(os.getcwd())
         if config.get("port"):
             args.port = config["port"]
             print(f"{C.BLUE}{_('port_auto_config', port=args.port)}{C.RESET}")
@@ -326,12 +332,16 @@ def main() -> None:
         exit()
 
     if args.sync:
-        sync_tree(os.path.join(os.getcwd(), args.src), filter=args.filter)
+        sync_tree(os.getcwd(), filter=args.filter)
         delete_empty_dirs()
         exit()
 
     if args.monitor:
-        serial_monitor(args.port)
+        baud = args.baud
+        if baud is None:
+            config = load_config(os.getcwd())
+            baud = config.get("baud", 115200)
+        serial_monitor(args.port, baud=baud)
         exit()
 
     parser.print_help()
